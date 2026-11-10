@@ -1,33 +1,34 @@
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Tests;
 
-/// <summary>Waiting rooms the player builds and fits out, waiting chairs, and where patients wait.</summary>
+/// <summary>The reception (a waiting room) the player builds and fits out, and chairs.</summary>
 public class WaitingRoomTests
 {
     private static readonly GridRect B = StarterSite.MainBuildingFootprint;
 
-    /// <summary>The waiting room's spot: in front of A&amp;E, over the front path, joined to the A&amp;E corridor.</summary>
+    /// <summary>The reception's spot: over the front path, joined to the main corridor.</summary>
     private static readonly GridRect Spot = new(B.X + 15, B.Y + 26, 22, 14);
 
     /// <summary>Middle of the front wall, where the path comes in.</summary>
     private static readonly GridCoord EntranceTile = new(B.X + 26, B.Bottom - 1);
 
-    /// <summary>Middle of the north wall, onto the corridor coming down from A&amp;E.</summary>
+    /// <summary>Middle of the north wall, onto the corridor coming down from the main corridor.</summary>
     private static readonly GridCoord InnerDoorTile = new(B.X + 26, B.Y + 26);
 
     private static readonly GridCoord DeskTile = new(B.X + 30, B.Y + 32);
 
-    /// <summary>A new game's A&amp;E with an empty waiting room built in the usual place.</summary>
+    /// <summary>A new school with the main corridor, a link down to the front, and an empty reception built in the usual place.</summary>
     private static (SimulationHarness H, CareSpace Room) EmptyWaitingRoom(int seed = 1234)
     {
         var h = new SimulationHarness(seed, waitingRoom: false);
         Assert.Empty(h.Sim.SpacesOfKind(CareSpaceKind.Waiting));
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 4, B.Y + 9, 56, 8), WallSide.South)).CanBuild);
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 22, B.Y + 17, 8, 9), WallSide.South)).CanBuild);
         var plan = h.Sim.AutoPlan("waiting_room", Spot);
         var check = h.Sim.BuildRoom(plan);
         Assert.True(check.CanBuild, string.Join("; ", check.Problems));
@@ -48,22 +49,20 @@ public class WaitingRoomTests
     private static CareSpace Room(SimulationHarness h) => h.Sim.SpacesOfKind(CareSpaceKind.Waiting).Single();
 
     [Fact]
-    public void A_new_game_has_no_waiting_room_and_A_and_E_waits_for_one()
+    public void A_new_game_has_no_reception()
     {
         var h = new SimulationHarness(waitingRoom: false);
         Assert.Empty(h.Sim.SpacesOfKind(CareSpaceKind.Waiting));
         Assert.Null(h.Sim.MainWaitingRoom);
-        Assert.False(h.Sim.IsEmergencyOpen);
-        Assert.Equal(new[] { "a waiting room" }, h.Sim.ClosedReasons);
     }
 
     [Fact]
-    public void A_waiting_room_is_built_empty_then_fitted_out_and_A_and_E_opens()
+    public void A_reception_is_built_empty_then_fitted_out()
     {
         var (h, room) = EmptyWaitingRoom();
         Assert.Empty(room.Doors);
         Assert.DoesNotContain(room.Furniture, f => f.ItemId == "reception_desk");
-        Assert.False(h.Sim.IsEmergencyOpen);
+        Assert.Equal(3, h.Sim.WaitingRoomProblems(room).Count);
 
         var before = h.Sim.Balance;
         FitOut(h, Room(h));
@@ -73,11 +72,12 @@ public class WaitingRoomTests
         Assert.True(h.Sim.HasEntranceDoor(room));
         Assert.True(h.Sim.HasInnerDoor(room));
         Assert.Same(room, h.Sim.MainWaitingRoom);
-        Assert.True(h.Sim.IsEmergencyOpen, string.Join(", ", h.Sim.ClosedReasons));
+        Assert.Empty(h.Sim.WaitingRoomProblems(room));
 
         // The receptionist works behind the desk; the queue runs out in front of it.
         Assert.Equal(new GridCoord(DeskTile.X, DeskTile.Y - 1), room.StaffSpot);
         Assert.Equal(new GridCoord(DeskTile.X, DeskTile.Y + 1), room.QueueTiles[0]);
+        h.Sim.HireStaff(StaffRole.Receptionist);
         h.RunFor(TimeSpan.FromMinutes(5));
         Assert.Contains(h.Sim.Staff, s => s.Role == StaffRole.Receptionist && s.Tile == room.StaffSpot);
     }
@@ -129,6 +129,7 @@ public class WaitingRoomTests
     {
         var (h, room) = EmptyWaitingRoom();
         FitOut(h, room);
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X + 4, B.Y, 8, 9), WallSide.South)).CanBuild);
         room = Room(h);
         var colour = ChairColours.Default;
 
@@ -138,8 +139,8 @@ public class WaitingRoomTests
         Assert.Contains(h.Sim.CheckChair(room.QueueTiles[1], WallSide.South, colour).Problems, p => p.Contains("reception desk"));
         Assert.Contains(h.Sim.CheckChair(new GridCoord(EntranceTile.X, EntranceTile.Y), WallSide.South, colour).Problems, p => p.Contains("doorway"));
         Assert.Contains(h.Sim.CheckChair(new GridCoord(InnerDoorTile.X, InnerDoorTile.Y - 1), WallSide.South, colour).Problems, p => p.Contains("doorway"));
-        var cubicle = h.Sim.Space("minors_1");
-        Assert.Contains(h.Sim.CheckChair(new GridCoord(cubicle.Rect.X + 2, cubicle.Rect.Y + 2), WallSide.South, colour).Problems, p => p.Contains("waiting room or along a corridor"));
+        var staffRoom = h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
+        Assert.Contains(h.Sim.CheckChair(new GridCoord(staffRoom.Rect.X + 2, staffRoom.Rect.Y + 2), WallSide.South, colour).Problems, p => p.Contains("waiting room or along a corridor"));
 
         // A new chair lines up with the one beside it; next to a wall it has its back to the wall.
         Assert.True(h.Sim.PlaceChair(new GridCoord(Spot.X + 2, Spot.Y + 4), WallSide.East, colour).CanBuild);
@@ -162,92 +163,6 @@ public class WaitingRoomTests
     }
 
     [Fact]
-    public void Without_chairs_patients_waiting_for_triage_stand_in_the_waiting_room()
-    {
-        var (h, room) = EmptyWaitingRoom();
-        FitOut(h, room);
-        room = Room(h);
-
-        // Keep triage busy so they have to wait.
-        foreach (var triage in h.Sim.SpacesOfKind(CareSpaceKind.Triage))
-        {
-            triage.ReservedByStaffId = 999;
-        }
-
-        var patient = h.Sim.SpawnPatient(ArrivalMethod.WalkIn);
-        h.RunUntil(() => patient.Stage == PatientStage.WaitingForTriage && !patient.IsMoving, TimeSpan.FromMinutes(30), "the patient registering and finding somewhere to wait");
-        Assert.Null(patient.Seat);
-        Assert.True(room.Rect.Contains(patient.Tile), $"{patient.Tile} is not in the waiting room");
-        Assert.DoesNotContain(patient.Tile, room.QueueTiles);
-    }
-
-    [Fact]
-    public void Before_triage_patients_sit_in_the_waiting_room_and_afterwards_near_where_they_are_going()
-    {
-        var h = new SimulationHarness();
-        var room = Room(h);
-        foreach (var triage in h.Sim.SpacesOfKind(CareSpaceKind.Triage))
-        {
-            triage.ReservedByStaffId = 999;
-        }
-
-        // A corridor chair right outside triage must not be used before triage: that waiting happens in the waiting room.
-        var outsideTriage = new GridCoord(B.X + 23, B.Y + 19);
-        Assert.True(h.Sim.PlaceChair(outsideTriage, WallSide.West, ChairColours.Default).CanBuild, string.Join("; ", h.Sim.CheckChair(outsideTriage, WallSide.West, ChairColours.Default).Problems));
-
-        var patient = h.Sim.SpawnPatient(ArrivalMethod.WalkIn);
-        h.RunUntil(() => patient.Stage == PatientStage.WaitingForTriage && !patient.IsMoving, TimeSpan.FromMinutes(30), "the patient to sit down for triage");
-        Assert.NotNull(patient.Seat);
-        Assert.True(room.Rect.Contains(patient.Seat!.Value));
-
-        // Every cubicle is full, so after triage they wait: on a chair beside the cubicles, not back in the waiting room.
-        foreach (var space in h.Sim.Spaces.Where(s => s.IsTreatmentSpace))
-        {
-            space.OccupantId = 999;
-        }
-
-        var nearCubicles = new[] { new GridCoord(B.X + 6, B.Y + 10), new GridCoord(B.X + 14, B.Y + 10), new GridCoord(B.X + 30, B.Y + 10), new GridCoord(B.X + 38, B.Y + 10), new GridCoord(B.X + 48, B.Y + 10) };
-        foreach (var tile in nearCubicles)
-        {
-            Assert.True(h.Sim.PlaceChair(tile, WallSide.North, ChairColours.Default).CanBuild, string.Join("; ", h.Sim.CheckChair(tile, WallSide.North, ChairColours.Default).Problems));
-        }
-
-        foreach (var triage in h.Sim.SpacesOfKind(CareSpaceKind.Triage))
-        {
-            triage.ReservedByStaffId = null;
-        }
-
-        h.RunUntil(() => patient.Stage == PatientStage.WaitingForSpace && patient.BusyWithTaskId is null && !patient.IsMoving, TimeSpan.FromHours(1), "the patient to be triaged and sit down again");
-        Assert.NotNull(patient.Seat);
-        Assert.Contains(patient.Seat!.Value, nearCubicles);
-        Assert.Equal(patient.Seat, patient.Tile);
-    }
-
-    [Fact]
-    public void Clinic_patients_sit_on_the_free_corridor_chair_nearest_their_clinic()
-    {
-        var h = new SimulationHarness(seed: 3);
-        h.Sim.AdjustBalance(2_000_000);
-        Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 30, B.Y, 30, 34)).CanBuild);
-        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 30, B.Y + 9, 34, 8), WallSide.South)).CanBuild);
-        Assert.True(h.Sim.BuildRoom(h.Sim.AutoPlan("outpatient_reception", new GridRect(B.X - 30, B.Y + 17, 7, 6))).CanBuild);
-        var reception = h.Sim.SpacesOfKind(CareSpaceKind.OutpatientReception).Single();
-        Assert.Empty(reception.Seats);
-        Assert.True(h.Sim.BuildRoom(h.Sim.AutoPlan("medical_clinic", new GridRect(B.X - 14, B.Y + 17, 8, 7))).CanBuild);
-        var clinic = h.Sim.Spaces.Single(s => s.TemplateId == "medical_clinic");
-        h.Sim.HireStaff(StaffRole.Receptionist, reception.Id, skill: 0.7);
-        h.Sim.HireStaff(StaffRole.Doctor, clinic.Id, skill: 0.7);
-
-        var near = new GridCoord(B.X - 6, B.Y + 15);
-        var far = new GridCoord(B.X - 28, B.Y + 10);
-        Assert.True(h.Sim.PlaceChair(near, WallSide.North, ChairColours.Default).CanBuild);
-        Assert.True(h.Sim.PlaceChair(far, WallSide.South, ChairColours.Default).CanBuild);
-
-        h.RunUntil(() => h.Sim.Outpatients.Any(o => o.Stage == OutpatientStage.Waiting && o.Seat is not null), TimeSpan.FromHours(3), "a clinic patient sitting down");
-        Assert.Equal(near, h.Sim.Outpatients.First(o => o.Stage == OutpatientStage.Waiting && o.Seat is not null).Seat);
-    }
-
-    [Fact]
     public void Desk_doors_and_chairs_are_saved_and_loaded()
     {
         var (h, room) = EmptyWaitingRoom();
@@ -265,32 +180,17 @@ public class WaitingRoomTests
         Assert.Equal(Room(h).StaffSpot, loaded.StaffSpot);
         Assert.Equal(Room(h).QueueTiles, loaded.QueueTiles);
         Assert.Equal(h.Sim.Chairs.OrderBy(c => c.Tile.X).ThenBy(c => c.Tile.Y), to.Sim.Chairs.OrderBy(c => c.Tile.X).ThenBy(c => c.Tile.Y));
-        Assert.True(to.Sim.IsEmergencyOpen, string.Join(", ", to.Sim.ClosedReasons));
+        Assert.Same(loaded, to.Sim.MainWaitingRoom);
     }
 
     [Fact]
-    public void An_old_save_keeps_its_waiting_room_desk_doors_and_seats()
+    public void The_starter_reception_comes_fitted_out_with_its_corridors()
     {
-        // As written before waiting rooms were fitted by hand: no desk or doors, and corridor chairs as bare tiles.
-        var h = new SimulationHarness(waitingRoom: false);
-        var layout = h.Sim.CaptureLayout();
-        var (w, d) = RoomLayoutEngine.LocalSize(Spot, WallSide.North);
-        var old = new LayoutState
-        {
-            Balance = layout.Balance,
-            Rooms = layout.Rooms.Append(new RoomState("waiting_room", "Waiting room", "waiting_room", Spot.X, Spot.Y, w, d, WallSide.North)).ToList(),
-            CorridorChairs = new[] { new GridCoord(B.X + 10, B.Y + 10) },
-        };
-
-        var to = new SimulationHarness(waitingRoom: false);
-        to.Sim.RestoreLayout(old);
-        var room = Room(to);
-        Assert.Same(room, to.Sim.MainWaitingRoom);
-        Assert.Contains(room.Furniture, f => f.ItemId == "reception_desk");
-        Assert.True(to.Sim.HasEntranceDoor(room));
-        Assert.True(to.Sim.HasInnerDoor(room));
-        Assert.True(to.Sim.Chairs.Count(c => room.Rect.Contains(c.Tile)) > 20);
-        Assert.Equal(WallSide.South, to.Sim.ChairAt(new GridCoord(B.X + 10, B.Y + 10))!.Facing);
-        Assert.True(to.Sim.IsEmergencyOpen, string.Join(", ", to.Sim.ClosedReasons));
+        var h = new SimulationHarness(waitingRoom: true);
+        var room = Room(h);
+        Assert.Same(room, h.Sim.MainWaitingRoom);
+        Assert.Empty(h.Sim.WaitingRoomProblems(room));
+        Assert.Equal(2, h.Sim.SpacesOfKind(CareSpaceKind.Corridor).Count());
+        Assert.NotEmpty(h.Sim.Chairs);
     }
 }

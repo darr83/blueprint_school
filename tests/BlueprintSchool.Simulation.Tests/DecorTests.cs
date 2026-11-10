@@ -11,7 +11,7 @@ public class DecorTests
 
     private static (SimulationHarness H, CareSpace Room) WithStaffRoom()
     {
-        var h = new SimulationHarness();
+        var h = new SimulationHarness(mainCorridor: true);
         h.Sim.AdjustBalance(5_000_000);
         Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 30, B.Y, 30, 34)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 30, B.Y + 9, 34, 8), WallSide.South)).CanBuild);

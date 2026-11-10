@@ -56,19 +56,15 @@ public class StatsHistoryTests
     }
 
     [Fact]
-    public void A_busy_day_shows_up_in_the_hospital_stats()
+    public void A_day_shows_up_in_the_school_stats()
     {
-        var h = new SimulationHarness(seed: 5, arrivals: true);
+        var h = new SimulationHarness(seed: 5);
+        h.Sim.HireStaff(Staff.StaffRole.Teacher);
         h.RunFor(TimeSpan.FromHours(12));
 
         var history = h.Sim.History;
         var now = h.Sim.Now;
-        Assert.True(h.Sim.Stats.ArrivalsTotal > 0);
-        Assert.Equal(h.Sim.Stats.ArrivalsTotal, history.Total(StatsPeriod.Last24Hours, now, StatKeys.Arrivals));
-        Assert.Equal(h.Sim.Stats.ArrivalsTotal, history.Total(StatsPeriod.AllTime, now, StatKeys.Arrivals));
-        Assert.Equal(h.Sim.Stats.DepartedTotal, history.Total(StatsPeriod.Last7Days, now, StatKeys.Departed));
         Assert.True(history.Gauge(StatsPeriod.Last24Hours, now, StatKeys.StaffOnDuty).Count >= 48);
-        Assert.Equal(h.Sim.Stats.ArrivalsTotal, history.Series(StatsPeriod.Last24Hours, now, StatKeys.Arrivals).Sum(p => p.Value));
 
         // Money is counted as it is booked.
         var wages = history.Total(StatsPeriod.Last24Hours, now, StatKeys.Money(MoneyCategory.Staff));
@@ -78,7 +74,8 @@ public class StatsHistoryTests
     [Fact]
     public void Stats_survive_save_and_load()
     {
-        var h = new SimulationHarness(seed: 7, arrivals: true);
+        var h = new SimulationHarness(seed: 7);
+        h.Sim.HireStaff(Staff.StaffRole.Teacher);
         h.RunFor(TimeSpan.FromHours(6));
         var json = SaveSerializer.Serialize(new SaveGame { Clock = h.Clock.CaptureState(), Layout = h.Sim.CaptureLayout(), People = h.Sim.CapturePeople() });
         var save = SaveSerializer.Deserialize(json);
@@ -88,31 +85,8 @@ public class StatsHistoryTests
         to.Sim.RestorePeople(save.People!);
 
         var now = to.Sim.Now;
-        Assert.Equal(h.Sim.History.Total(StatsPeriod.Last24Hours, now, StatKeys.Arrivals), to.Sim.History.Total(StatsPeriod.Last24Hours, now, StatKeys.Arrivals));
+        var key = StatKeys.Money(MoneyCategory.Staff);
+        Assert.Equal(h.Sim.History.Total(StatsPeriod.Last24Hours, now, key), to.Sim.History.Total(StatsPeriod.Last24Hours, now, key));
         Assert.Equal(h.Sim.History.Since, to.Sim.History.Since);
-
-        // Carrying on doesn't count the loaded totals a second time.
-        to.RunFor(TimeSpan.FromMinutes(1));
-        Assert.Equal(to.Sim.Stats.ArrivalsTotal, to.Sim.History.Total(StatsPeriod.AllTime, to.Sim.Now, StatKeys.Arrivals));
-    }
-
-    [Fact]
-    public void An_older_save_starts_the_history_with_its_totals_since_opening()
-    {
-        var h = new SimulationHarness(seed: 7, arrivals: true);
-        h.RunFor(TimeSpan.FromHours(6));
-        var people = h.Sim.CapturePeople();
-        var json = SaveSerializer.Serialize(new SaveGame { Clock = h.Clock.CaptureState(), Layout = h.Sim.CaptureLayout(), People = people });
-        json = json.Replace("\"history\"", "\"history_unused\"").Replace("\"History\"", "\"History_unused\"");
-        var save = SaveSerializer.Deserialize(json);
-        Assert.Null(save.People!.History);
-        var to = new SimulationHarness(seed: 99);
-        to.Clock.RestoreState(save.Clock);
-        to.Sim.RestoreLayout(save.Layout!);
-        to.Sim.RestorePeople(save.People!);
-
-        var now = to.Sim.Now;
-        Assert.Equal(h.Sim.Stats.ArrivalsTotal, to.Sim.History.Total(StatsPeriod.AllTime, now, StatKeys.Arrivals));
-        Assert.Equal(0, to.Sim.History.Total(StatsPeriod.Last24Hours, now, StatKeys.Arrivals));
     }
 }

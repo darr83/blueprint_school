@@ -2,7 +2,6 @@ using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Data.Models;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
@@ -65,10 +64,9 @@ public sealed class LayoutState
 public sealed partial class SchoolSimulation
 {
     /// <summary>
-    /// Money a new hospital starts with, in pounds. It includes about £75,000 for the waiting room, which
-    /// the player now builds and fits out themselves (it used to come free with the hospital).
+    /// Money a new school starts with, in pounds: enough to build and fit out the first rooms.
     /// </summary>
-    public const long StartingBalance = 825_000;
+    public const long StartingBalance = 1_500_000;
 
     /// <summary>Cost of extending the building, per square metre of new floor.</summary>
     public const int ExtensionCostPerSquareMetre = 1_400;
@@ -161,7 +159,7 @@ public sealed partial class SchoolSimulation
     private List<Doorway> StreetDoors(GridRect rect)
     {
         var doors = new List<Doorway>();
-        foreach (var e in MainBuilding.Entrances.Where(e => !e.IsAmbulanceEntrance))
+        foreach (var e in MainBuilding.Entrances)
         {
             var tiles = Enumerable.Range(0, e.WidthTiles)
                 .Select(i => e.Side is WallSide.North or WallSide.South ? new GridCoord(e.Tile.X + i, e.Tile.Y) : new GridCoord(e.Tile.X, e.Tile.Y + i))
@@ -337,23 +335,11 @@ public sealed partial class SchoolSimulation
     /// <summary>Why a room can't be moved or demolished right now, if anything.</summary>
     private IEnumerable<string> CheckRoomIsClear(CareSpace space)
     {
-        if (space.OccupantId is not null || _patients.Values.Any(p => p.CareSpaceId == space.Id))
-        {
-            yield return $"{space.Name} has a patient in it.";
-        }
-        else if (space.Beds.Any(b => b.OccupantId is not null) || _patients.Values.Any(p => p.ReservedWardId == space.Id))
-        {
-            yield return $"A bed on {space.Name} is booked for a patient in A&E.";
-        }
-        else if (space.ReservedByStaffId is not null || _tasks.Values.Any(t => t.SpaceId == space.Id))
+        if (space.ReservedByStaffId is not null)
         {
             yield return $"{space.Name} is being used.";
         }
-        else if (_patients.Values.Any(p => InsideOrHeading(p, space.Rect)))
-        {
-            yield return $"Patients are in {space.Name}.";
-        }
-        else if (_staff.Any(s => s.CurrentTaskId is not null && InsideOrHeading(s, space.Rect)))
+        else if (_staff.Any(s => s.Activity == StaffActivity.Working && InsideOrHeading(s, space.Rect)))
         {
             yield return $"Staff are working in {space.Name}.";
         }
@@ -363,15 +349,14 @@ public sealed partial class SchoolSimulation
         rect.Contains(agent.Tile) || (agent.Destination is { } d && rect.Contains(d));
 
     private IEnumerable<Agent> AgentsOn(GridRect rect, CareSpace? ignoringRoom) =>
-        _patients.Values.Where(p => p.Stage != PatientStage.Gone).Cast<Agent>().Concat(_staff)
+        _staff.Cast<Agent>()
             .Where(a => rect.Contains(a.Tile) && (ignoringRoom is null || !ignoringRoom.Rect.Contains(a.Tile)));
 
-    /// <summary>Everyone must still be able to walk from the street to every room, and to the ambulance bay.</summary>
+    /// <summary>Everyone must still be able to walk from the street to every room.</summary>
     private IEnumerable<string> CheckReachable(IReadOnlyCollection<CareSpace> spaces)
     {
-        var nav = EmergencyDepartmentLayout.BuildNavGrid(Site, spaces);
+        var nav = SiteLayout.BuildNavGrid(Site, spaces);
         var reached = nav.Reachable(WalkInSpawn);
-        var stepFree = Site.FloorCount > 1 ? nav.Reachable(WalkInSpawn, stepFreeOnly: true) : reached;
 
         // A waiting room built over the main entrance is reached through the entrance doors the player puts in it.
         foreach (var entrance in MainBuilding.Entrances.Where(e => !reached.Contains(e.Tile) && !spaces.Any(s => s.Kind == CareSpaceKind.Waiting && s.Rect.Contains(e.Tile))))
@@ -379,23 +364,13 @@ public sealed partial class SchoolSimulation
             yield return $"Would block the {entrance.Name.ToLowerInvariant()}.";
         }
 
-        foreach (var tile in AmbulanceBayPatientTiles.Where(t => !reached.Contains(t)).Take(1))
-        {
-            yield return "Would block the ambulance bay.";
-        }
-
         // A waiting room with no doors yet is still being fitted out.
         foreach (var space in spaces.Where(s => s.Kind != CareSpaceKind.Corridor && !(s.Kind == CareSpaceKind.Waiting && s.Doors.Count == 0)))
         {
-            var spots = new[] { space.StaffSpot, space.PatientSpot }.Concat(space.Seats).Concat(space.QueueTiles)
-                .Concat(space.Beds.SelectMany(b => new[] { b.PatientSpot, b.StaffSpot }));
+            var spots = new[] { space.StaffSpot, space.PatientSpot }.Concat(space.Seats).Concat(space.QueueTiles);
             if (spots.Any(t => !reached.Contains(t)))
             {
                 yield return $"{space.Name} could not be reached.";
-            }
-            else if (NeedsLift(space) && !stepFree.Contains(space.PatientSpot) && !space.Beds.All(b => stepFree.Contains(b.PatientSpot)))
-            {
-                yield return $"{space.Name} needs a lift: wheelchairs and trolleys can't use the stairs.";
             }
         }
     }
@@ -497,7 +472,6 @@ public sealed partial class SchoolSimulation
         {
             var what = kind switch
             {
-                TileKind.AmbulanceBay => "ambulance bay",
                 TileKind.Parking => "car park",
                 TileKind.Road => "road",
                 _ => "existing building",
@@ -510,12 +484,12 @@ public sealed partial class SchoolSimulation
             problems.Add($"Would block the approach to the {entrance.Name.ToLowerInvariant()}.");
         }
 
-        if (AmbulanceBayPatientTiles.Concat(AmbulanceParkingTiles).Append(WalkInSpawn).Any(area.Contains))
+        if (area.Contains(WalkInSpawn))
         {
-            problems.Add("Would block the ambulance bay.");
+            problems.Add("Would block the front path.");
         }
 
-        if (AgentsOn(area, null).Any(a => !building.Contains(a.Tile)) || _ambulances.Any(a => area.Contains(a.Tile)))
+        if (AgentsOn(area, null).Any(a => !building.Contains(a.Tile)))
         {
             problems.Add("Someone is standing there.");
         }
@@ -658,16 +632,6 @@ public sealed partial class SchoolSimulation
     {
         var baseName = template.Kind switch
         {
-            CareSpaceKind.Minors => "Minors",
-            CareSpaceKind.Majors => "Majors",
-            CareSpaceKind.Resus => "Resus",
-            CareSpaceKind.Triage => "Triage",
-            CareSpaceKind.Ward when template.Department == "general_medicine" => "Ward",
-            CareSpaceKind.Ward when template.Department == EmergencyDepartmentId => "A&E ward",
-            CareSpaceKind.Ward => template.Name,
-            CareSpaceKind.Theatre when template.TheatreDepartments.Count > 0 => template.Name,
-            CareSpaceKind.Theatre => "Theatre",
-            CareSpaceKind.Pharmacy => "Pharmacy",
             _ => template.Name,
         };
         var n = 1;
@@ -682,11 +646,11 @@ public sealed partial class SchoolSimulation
     /// <summary>Rebuilds pathfinding and sends anyone whose route or base changed on their way again.</summary>
     private void AfterLayoutChange()
     {
-        Nav = EmergencyDepartmentLayout.BuildNavGrid(Site, _spaces.Values);
+        Nav = SiteLayout.BuildNavGrid(Site, _spaces.Values);
         SyncRoomStaff();
         PruneChairs();
 
-        foreach (var agent in _patients.Values.Cast<Agent>().Concat(_staff).Concat(_outpatients))
+        foreach (var agent in _staff)
         {
             if (agent.Destination is { } destination)
             {
@@ -708,7 +672,7 @@ public sealed partial class SchoolSimulation
                 member.BreakEndsAt = null;
             }
 
-            if (member.Activity == StaffActivity.Idle && member.CurrentTaskId is null)
+            if (member.Activity == StaffActivity.Idle)
             {
                 var home = HomeTile(member);
                 var path = Nav.FindPath(member.Tile, home);
@@ -779,7 +743,7 @@ public sealed partial class SchoolSimulation
             _spaces[r.Id] = Furnish(plan, r.Id, r.Name);
         }
 
-        Nav = EmergencyDepartmentLayout.BuildNavGrid(Site, _spaces.Values);
+        Nav = SiteLayout.BuildNavGrid(Site, _spaces.Values);
         _chairs.AddRange(state.Chairs.Concat(upgraded).GroupBy(c => c.Tile).Select(g => g.First() with { Colour = ChairColours.Normalise(g.First().Colour) }));
         foreach (var tile in state.CorridorChairs.Distinct().Where(t => ChairAt(t) is null))
         {
@@ -788,7 +752,7 @@ public sealed partial class SchoolSimulation
 
         PruneChairs();
         Balance = state.Balance;
-        Nav = EmergencyDepartmentLayout.BuildNavGrid(Site, _spaces.Values);
+        Nav = SiteLayout.BuildNavGrid(Site, _spaces.Values);
         SyncRoomStaff();
         foreach (var member in _staff)
         {

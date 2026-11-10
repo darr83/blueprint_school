@@ -10,16 +10,9 @@ namespace BlueprintSchool.Simulation.Data;
 public sealed class GameDatabase
 {
     public const string DepartmentsFolder = "Departments";
-    public const string SymptomsFolder = "Symptoms";
-    public const string ConditionsFolder = "Conditions";
-    public const string InvestigationsFolder = "Investigations";
-    public const string MedicationsFolder = "Medications";
     public const string NamesFolder = "Names";
-    public const string ArrivalsFolder = "Arrivals";
-    public const string PatientBackgroundsFolder = "PatientBackgrounds";
     public const string FurnitureFolder = "Furniture";
     public const string RoomTemplatesFolder = "RoomTemplates";
-    public const string ClinicsFolder = "Clinics";
 
     private GameDatabase()
     {
@@ -27,28 +20,13 @@ public sealed class GameDatabase
 
     public IReadOnlyDictionary<string, DepartmentDefinition> Departments { get; private init; } = null!;
 
-    public IReadOnlyDictionary<string, SymptomDefinition> Symptoms { get; private init; } = null!;
-
-    public IReadOnlyDictionary<string, ConditionDefinition> Conditions { get; private init; } = null!;
-
-    public IReadOnlyDictionary<string, InvestigationDefinition> Investigations { get; private init; } = null!;
-
-    public IReadOnlyDictionary<string, MedicationDefinition> Medications { get; private init; } = null!;
-
     public IReadOnlyDictionary<string, NamePool> Names { get; private init; } = null!;
-
-    public IReadOnlyDictionary<string, ArrivalProfile> Arrivals { get; private init; } = null!;
-
-    public IReadOnlyDictionary<string, PatientBackground> PatientBackgrounds { get; private init; } = null!;
 
     public IReadOnlyDictionary<string, FurnitureDefinition> Furniture { get; private init; } = null!;
 
     public IReadOnlyDictionary<string, RoomTemplate> RoomTemplates { get; private init; } = null!;
 
-    /// <summary>How each clinic room runs its appointments, by room template id.</summary>
-    public IReadOnlyDictionary<string, ClinicDefinition> Clinics { get; private init; } = null!;
-
-    /// <summary>The department every new hospital starts with.</summary>
+    /// <summary>The department every new school starts with.</summary>
     public DepartmentDefinition StartingDepartment => Departments.Values.Single(d => d.StartsUnlocked);
 
     /// <summary>Loads every data folder. Throws <see cref="DataLoadException"/> listing every problem if anything is invalid.</summary>
@@ -60,16 +38,9 @@ public sealed class GameDatabase
         var db = new GameDatabase
         {
             Departments = RecordLoader.LoadFolder<DepartmentDefinition>(source, DepartmentsFolder, errors),
-            Symptoms = RecordLoader.LoadFolder<SymptomDefinition>(source, SymptomsFolder, errors),
-            Conditions = RecordLoader.LoadFolder<ConditionDefinition>(source, ConditionsFolder, errors),
-            Investigations = RecordLoader.LoadFolder<InvestigationDefinition>(source, InvestigationsFolder, errors),
-            Medications = RecordLoader.LoadFolder<MedicationDefinition>(source, MedicationsFolder, errors),
             Names = RecordLoader.LoadFolder<NamePool>(source, NamesFolder, errors),
-            Arrivals = RecordLoader.LoadFolder<ArrivalProfile>(source, ArrivalsFolder, errors),
-            PatientBackgrounds = RecordLoader.LoadFolder<PatientBackground>(source, PatientBackgroundsFolder, errors),
             Furniture = RecordLoader.LoadFolder<FurnitureDefinition>(source, FurnitureFolder, errors),
             RoomTemplates = RecordLoader.LoadFolder<RoomTemplate>(source, RoomTemplatesFolder, errors),
-            Clinics = RecordLoader.LoadFolder<ClinicDefinition>(source, ClinicsFolder, errors),
         };
 
         db.CheckDatabaseRules(errors);
@@ -100,79 +71,6 @@ public sealed class GameDatabase
             }
         }
 
-        foreach (var template in RoomTemplates.Values.Where(t => t.Kind == CareSpaceKind.Clinic && !Clinics.ContainsKey(t.Id)))
-        {
-            errors.Add(new DataValidationError(RoomTemplatesFolder, template.Id, "kind", $"clinic room '{template.Id}' needs an entry with the same id in {ClinicsFolder}."));
-        }
-
-        foreach (var condition in Conditions.Values)
-        {
-            var file = $"{ConditionsFolder}/";
-            void Missing(string field, string kind, string id) =>
-                errors.Add(new DataValidationError(file, condition.Id, field, $"refers to unknown {kind} '{id}'."));
-
-            if (!Departments.ContainsKey(condition.Department))
-            {
-                Missing("department", "department", condition.Department);
-            }
-
-            foreach (var s in condition.Symptoms.Where(s => !Symptoms.ContainsKey(s.Symptom)))
-            {
-                Missing("symptoms", "symptom", s.Symptom);
-            }
-
-            foreach (var i in condition.KeyInvestigations.Where(i => !Investigations.ContainsKey(i)))
-            {
-                Missing("key_investigations", "investigation", i);
-            }
-
-            foreach (var m in condition.Treatment.Where(t => t.Type == TreatmentStepType.Medication && !Medications.ContainsKey(t.Medication!)))
-            {
-                Missing("treatment", "medication", m.Medication!);
-            }
-
-            if (condition.Maternity?.EmergencyCaesarean is { Length: > 0 } section)
-            {
-                if (!Conditions.TryGetValue(section, out var target))
-                {
-                    Missing("maternity.emergency_caesarean", "condition", section);
-                }
-                else if (target.Maternity is null || target.Operation?.Room != CareSpaceKind.Theatre)
-                {
-                    errors.Add(new DataValidationError(file, condition.Id, "maternity.emergency_caesarean", $"'{section}' must be a maternity condition operated on in theatre."));
-                }
-            }
-        }
-
-        foreach (var template in RoomTemplates.Values)
-        {
-            foreach (var d in template.TheatreDepartments.Where(d => !Departments.ContainsKey(d)))
-            {
-                errors.Add(new DataValidationError($"{RoomTemplatesFolder}/", template.Id, "theatre_departments", $"refers to unknown department '{d}'."));
-            }
-        }
-
-        foreach (var symptom in Symptoms.Values)
-        {
-            foreach (var i in symptom.TriageInvestigations.Where(i => !Investigations.ContainsKey(i)))
-            {
-                errors.Add(new DataValidationError($"{SymptomsFolder}/", symptom.Id, "triage_investigations", $"refers to unknown investigation '{i}'."));
-            }
-        }
-
-        foreach (var investigation in Investigations.Values)
-        {
-            foreach (var a in investigation.Abnormal.Where(a => !Conditions.ContainsKey(a.Condition)))
-            {
-                errors.Add(new DataValidationError($"{InvestigationsFolder}/", investigation.Id, "abnormal.condition", $"refers to unknown condition '{a.Condition}'."));
-            }
-        }
-
-        foreach (var profile in Arrivals.Values.Where(p => !Departments.ContainsKey(p.Department)))
-        {
-            errors.Add(new DataValidationError($"{ArrivalsFolder}/", profile.Id, "department", $"refers to unknown department '{profile.Department}'."));
-        }
-
         foreach (var template in RoomTemplates.Values)
         {
             var file = $"{RoomTemplatesFolder}/";
@@ -196,24 +94,12 @@ public sealed class GameDatabase
     /// <summary>Creates a database directly from records. For tests.</summary>
     public static GameDatabase FromRecords(
         IEnumerable<DepartmentDefinition>? departments = null,
-        IEnumerable<SymptomDefinition>? symptoms = null,
-        IEnumerable<ConditionDefinition>? conditions = null,
-        IEnumerable<InvestigationDefinition>? investigations = null,
-        IEnumerable<MedicationDefinition>? medications = null,
         IEnumerable<NamePool>? names = null,
-        IEnumerable<ArrivalProfile>? arrivals = null,
-        IEnumerable<PatientBackground>? backgrounds = null,
         IEnumerable<FurnitureDefinition>? furniture = null,
         IEnumerable<RoomTemplate>? roomTemplates = null) => new()
     {
         Departments = (departments ?? Array.Empty<DepartmentDefinition>()).ToDictionary(r => r.Id),
-        Symptoms = (symptoms ?? Array.Empty<SymptomDefinition>()).ToDictionary(r => r.Id),
-        Conditions = (conditions ?? Array.Empty<ConditionDefinition>()).ToDictionary(r => r.Id),
-        Investigations = (investigations ?? Array.Empty<InvestigationDefinition>()).ToDictionary(r => r.Id),
-        Medications = (medications ?? Array.Empty<MedicationDefinition>()).ToDictionary(r => r.Id),
         Names = (names ?? Array.Empty<NamePool>()).ToDictionary(r => r.Id),
-        Arrivals = (arrivals ?? Array.Empty<ArrivalProfile>()).ToDictionary(r => r.Id),
-        PatientBackgrounds = (backgrounds ?? Array.Empty<PatientBackground>()).ToDictionary(r => r.Id),
         Furniture = (furniture ?? Array.Empty<FurnitureDefinition>()).ToDictionary(r => r.Id),
         RoomTemplates = (roomTemplates ?? Array.Empty<RoomTemplate>()).ToDictionary(r => r.Id),
     };

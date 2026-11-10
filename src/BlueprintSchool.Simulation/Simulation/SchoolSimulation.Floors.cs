@@ -1,7 +1,6 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Data.Models;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Simulation;
@@ -38,25 +37,8 @@ public sealed partial class SchoolSimulation
             ? _spaces.Values.Where(s => s.TemplateId == space.TemplateId && Site.Local(s.Rect) == Site.Local(space.Rect)).OrderBy(FloorOf).ToList()
             : new[] { space };
 
-    /// <summary>Patients are brought to this room in wheelchairs and on trolleys, so upstairs it needs a lift.</summary>
-    private static bool NeedsLift(CareSpace space) => space.Kind is not (CareSpaceKind.Corridor or CareSpaceKind.Stairs
-        or CareSpaceKind.NursesStation or CareSpaceKind.DoctorsOffice or CareSpaceKind.StaffRoom or CareSpaceKind.OutreachOffice or CareSpaceKind.Pharmacy);
-
-    /// <summary>A walking route for anyone; wheelchairs and trolleys go by lift (falling back to any route if there is none).</summary>
-    public IReadOnlyList<GridCoord> PathFor(Agent agent, GridCoord destination)
-    {
-        var wheeled = agent is Patient { Mobility: not Mobility.Walking } || (agent is Staff.StaffMember { PushingPatientId: not null });
-        if (wheeled && Site.FloorCount > 1)
-        {
-            var stepFree = Nav.FindPath(agent.Tile, destination, stepFreeOnly: true);
-            if (stepFree.Count > 0)
-            {
-                return stepFree;
-            }
-        }
-
-        return Nav.FindPath(agent.Tile, destination);
-    }
+    /// <summary>A walking route for anyone.</summary>
+    public IReadOnlyList<GridCoord> PathFor(Agent agent, GridCoord destination) => Nav.FindPath(agent.Tile, destination);
 
     // ------------------------------------------------------------------ floors
 

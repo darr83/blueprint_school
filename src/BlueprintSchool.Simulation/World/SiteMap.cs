@@ -6,13 +6,12 @@ public enum TileKind : byte
     Grass,
     Paving,
     Road,
-    AmbulanceBay,
     Parking,
     BuildingFloor,
 }
 
 /// <summary>An entrance in a building's outer wall. <see cref="Tile"/> is the floor tile just inside.</summary>
-public sealed record Entrance(string Id, string Name, GridCoord Tile, WallSide Side, int WidthTiles, bool IsAmbulanceEntrance);
+public sealed record Entrance(string Id, string Name, GridCoord Tile, WallSide Side, int WidthTiles);
 
 /// <summary>Which outer wall of a building something sits on.</summary>
 public enum WallSide

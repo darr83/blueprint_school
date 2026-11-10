@@ -54,15 +54,13 @@ public class WorldTests
     }
 
     [Fact]
-    public void Starter_site_has_building_with_both_entrances()
+    public void Starter_site_has_building_with_a_main_entrance()
     {
         var site = StarterSite.Create();
 
         var building = Assert.Single(site.Buildings);
         Assert.Equal(TileKind.BuildingFloor, site[new GridCoord(building.Footprint.X + 5, building.Footprint.Y + 5)]);
-        Assert.Contains(building.Entrances, e => e.IsAmbulanceEntrance);
-        Assert.Contains(building.Entrances, e => !e.IsAmbulanceEntrance);
-        Assert.Contains(site.Bounds.Tiles(), t => site[t] == TileKind.AmbulanceBay);
+        Assert.Equal(new[] { "main_entrance", "side_entrance" }, building.Entrances.Select(e => e.Id));
         Assert.Equal(30.0, Units.TilesToMetres(building.Footprint.Width));
     }
 

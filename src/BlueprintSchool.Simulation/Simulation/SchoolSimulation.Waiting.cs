@@ -1,20 +1,15 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Simulation;
 
 /// <summary>
-/// Waiting rooms and waiting chairs. The player builds a waiting room as an empty room, then places its reception
-/// desk, an entrance door (on the front path, where the blue mat is) and a door through to a corridor. Chairs go
-/// anywhere in a waiting room or along the corridors, facing whichever way the player turns them, in the colour
-/// they pick.
-/// <para>
-/// Patients waiting to be triaged sit in a waiting room. Everyone else waiting for something sits on the free chair
-/// nearest to where they are going next (or stands nearby when every chair is taken).
-/// </para>
+/// The reception area and chairs. The player builds a reception (a waiting room) as an empty room, then places its
+/// reception desk, an entrance door (on the front path, where the blue mat is) and a door through to a corridor.
+/// Chairs go anywhere in a reception or along the corridors, facing whichever way the player turns them, in the
+/// colour they pick.
 /// </summary>
 public sealed partial class SchoolSimulation
 {
@@ -32,7 +27,6 @@ public sealed partial class SchoolSimulation
 
     private readonly Dictionary<string, WaitingFittings> _fittings = new();
     private readonly List<PlacedChair> _chairs = new();
-    private int _reseatCountdown;
 
     /// <summary>Waiting chairs the player has placed, in waiting rooms and along corridors.</summary>
     public IReadOnlyList<PlacedChair> Chairs => _chairs;
@@ -66,12 +60,12 @@ public sealed partial class SchoolSimulation
 
     public bool HasInnerDoor(CareSpace room) => room.Doors.Any(d => !IsEntranceDoor(room, d));
 
-    /// <summary>The waiting room walk-in patients come in to: one with a reception desk and an entrance door.</summary>
+    /// <summary>The main reception visitors come in to: one with a reception desk and an entrance door.</summary>
     public CareSpace? MainWaitingRoom =>
         SpacesOfKind(CareSpaceKind.Waiting).FirstOrDefault(r => FittingsOf(r).Desk is not null && HasEntranceDoor(r) && HasInnerDoor(r))
         ?? SpacesOfKind(CareSpaceKind.Waiting).FirstOrDefault(r => FittingsOf(r).Desk is not null && HasEntranceDoor(r));
 
-    /// <summary>What a waiting room still needs before walk-in patients can use it (empty when it is ready).</summary>
+    /// <summary>What a waiting room still needs before visitors can use it (empty when it is ready).</summary>
     public IReadOnlyList<string> WaitingRoomProblems(CareSpace room)
     {
         var missing = new List<string>();
@@ -93,7 +87,7 @@ public sealed partial class SchoolSimulation
         return missing;
     }
 
-    /// <summary>The waiting room's needs, for the list of what A&amp;E is missing.</summary>
+    /// <summary>The reception's needs, for the list of what the school is missing.</summary>
     private IEnumerable<string> WaitingRoomReasons()
     {
         var rooms = SpacesOfKind(CareSpaceKind.Waiting).ToList();
@@ -139,10 +133,6 @@ public sealed partial class SchoolSimulation
         }
 
         var existing = FittingsOf(room).Desk;
-        if (existing is not null && room == MainWaitingRoom && _receptionQueue.Count > 0)
-        {
-            problems.Add("Patients are queueing at the desk.");
-        }
 
         var cost = existing is null ? ReceptionDeskCost : 0;
         if (!CanAfford(cost))
@@ -304,7 +294,7 @@ public sealed partial class SchoolSimulation
 
         var problems = new List<string>();
         var inside = WaitingRoomLayout.DoorTiles(room.Rect, new[] { door }).ToList();
-        if (_patients.Values.Cast<Agent>().Concat(_staff).Concat(_outpatients).Any(a => inside.Contains(a.Tile) || inside.Contains(Step(a.Tile, WaitingRoomLayout.Opposite(door.Side)))))
+        if (_staff.Any(a => inside.Contains(a.Tile) || inside.Contains(Step(a.Tile, WaitingRoomLayout.Opposite(door.Side)))))
         {
             problems.Add("Someone is in the doorway.");
         }
@@ -370,7 +360,6 @@ public sealed partial class SchoolSimulation
             {
                 if (from.Contains(_chairs[i].Tile))
                 {
-                    UnseatFrom(_chairs[i].Tile);
                     _chairs[i] = _chairs[i] with { Tile = new GridCoord(_chairs[i].Tile.X + dx, _chairs[i].Tile.Y + dy) };
                 }
             }
@@ -476,22 +465,8 @@ public sealed partial class SchoolSimulation
 
         _chairs.Remove(chair);
         Book(MoneyCategory.Construction, ChairCost / 2);
-        UnseatFrom(tile);
         Events.Publish(new LayoutChanged());
         return true;
-    }
-
-    private void UnseatFrom(GridCoord tile)
-    {
-        foreach (var p in _patients.Values.Where(p => p.Seat == tile))
-        {
-            p.Seat = null;
-        }
-
-        foreach (var o in _outpatients.Where(o => o.Seat == tile))
-        {
-            o.Seat = null;
-        }
     }
 
     /// <summary>
@@ -562,26 +537,11 @@ public sealed partial class SchoolSimulation
             {
                 _chairs.Remove(chair);
                 Book(MoneyCategory.Construction, ChairCost);
-                UnseatFrom(chair.Tile);
             }
         }
     }
 
     // ---------------------------------------------------------------- where people wait
-
-    /// <summary>Chairs someone is sitting on or heading for.</summary>
-    private HashSet<GridCoord> TakenChairs()
-    {
-        var taken = _patients.Values.Where(p => p.Seat.HasValue && p.Stage != PatientStage.Gone).Select(p => p.Seat!.Value).ToHashSet();
-        taken.UnionWith(_outpatients.Where(o => o.Seat.HasValue).Select(o => o.Seat!.Value));
-        return taken;
-    }
-
-    private bool InWaitingRoom(GridCoord tile) => SpacesOfKind(CareSpaceKind.Waiting).Any(r => r.Rect.Contains(tile));
-
-    /// <summary>How far apart two tiles are for choosing a chair: other floors count as a long way off.</summary>
-    private int WaitDistance(GridCoord a, GridCoord b) =>
-        Math.Abs(a.X - b.X) + Math.Abs(Site.Local(a).Y - Site.Local(b).Y) + (Site.FloorOf(a) == Site.FloorOf(b) ? 0 : 200);
 
     /// <summary>The corridor tile just outside a room's (first) door: where someone heading in arrives.</summary>
     private static GridCoord DoorstepOf(CareSpace room)
@@ -593,59 +553,6 @@ public sealed partial class SchoolSimulation
 
         var tiles = WaitingRoomLayout.DoorTiles(room.Rect, new[] { door }).ToList();
         return Step(tiles[tiles.Count / 2], door.Side);
-    }
-
-    /// <summary>Where a waiting A&amp;E patient is going next: the room they are waiting for.</summary>
-    private GridCoord WaitTarget(Patient patient)
-    {
-        // A test or procedure booked in a room.
-        if (_tasks.Values.FirstOrDefault(t => t.PatientId == patient.Id && t.SpaceId is not null) is { SpaceId: { } booked } && FindSpace(booked) is { } bookedRoom)
-        {
-            return DoorstepOf(bookedRoom);
-        }
-
-        if (patient.Triage is not { } category)
-        {
-            var triage = SpacesOfKind(CareSpaceKind.Triage).OrderBy(t => WaitDistance(t.PatientSpot, patient.Tile)).FirstOrDefault();
-            return triage is not null ? DoorstepOf(triage) : MainWaitingRoom?.StaffSpot ?? patient.Tile;
-        }
-
-        foreach (var kind in SpacePreference(category))
-        {
-            var nearest = SpacesOfKind(kind).OrderBy(s => WaitDistance(DoorstepOf(s), patient.Tile)).FirstOrDefault();
-            if (nearest is not null)
-            {
-                return DoorstepOf(nearest);
-            }
-        }
-
-        return MainWaitingRoom is { } waiting ? waiting.StaffSpot : patient.Tile;
-    }
-
-    /// <summary>
-    /// Sends a waiting patient to sit down: before triage on a chair in a waiting room, afterwards on the free chair
-    /// nearest to where they are going next. With no free chair they stand nearby.
-    /// </summary>
-    internal void SendToWaitingRoom(Patient patient)
-    {
-        ReleaseSpace(patient);
-        patient.Seat = null;
-        var preTriage = patient.Triage is null;
-        var target = WaitTarget(patient);
-        var taken = TakenChairs();
-        var chair = _chairs
-            .Where(c => !taken.Contains(c.Tile) && (!preTriage || InWaitingRoom(c.Tile)))
-            .OrderBy(c => WaitDistance(c.Tile, target))
-            .ThenBy(c => c.Tile.Y).ThenBy(c => c.Tile.X)
-            .FirstOrDefault();
-        if (chair is not null)
-        {
-            patient.Seat = chair.Tile;
-            WalkTo(patient, chair.Tile);
-            return;
-        }
-
-        WalkTo(patient, StandingSpot(preTriage && MainWaitingRoom is { } room ? room.StaffSpot : target, preTriage, patient));
     }
 
     /// <summary>
@@ -675,7 +582,7 @@ public sealed partial class SchoolSimulation
         }
 
         // Somewhere nobody else waiting is standing or heading.
-        var others = _patients.Values.Where(p => !ReferenceEquals(p, who) && p.Stage != PatientStage.Gone).Cast<Agent>().Concat(_outpatients.Where(o => !ReferenceEquals(o, who)))
+        var others = _staff.Where(s => !ReferenceEquals(s, who))
             .SelectMany(a => a.Destination is { } d ? new[] { a.Tile, d } : new[] { a.Tile })
             .ToHashSet();
 
@@ -720,46 +627,29 @@ public sealed partial class SchoolSimulation
         return fallback ?? near;
     }
 
-    /// <summary>Every so often, waiting patients who are standing take a chair if one has come free.</summary>
-    private void ReseatStandingPatients()
-    {
-        if (--_reseatCountdown > 0)
-        {
-            return;
-        }
-
-        _reseatCountdown = 30;
-        if (_chairs.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var p in _patients.Values.Where(p =>
-                     p.Stage is PatientStage.WaitingForTriage or PatientStage.WaitingForSpace
-                     && p.Seat is null && !p.IsMoving && p.BusyWithTaskId is null && p.CareSpaceId is null && p.PendingMove is null
-                     && p.Mobility == Mobility.Walking && !Away(p)).ToList())
-        {
-            var preTriage = p.Triage is null;
-            var taken = TakenChairs();
-            if (_chairs.Any(c => !taken.Contains(c.Tile) && (!preTriage || InWaitingRoom(c.Tile))))
-            {
-                SendToWaitingRoom(p);
-            }
-        }
-    }
-
     // ---------------------------------------------------------------- building and saving
 
     /// <summary>
-    /// Builds the waiting room a new game used to start with: in front of A&amp;E, with its desk, doors and seats.
+    /// Builds a reception by the main entrance, with its desk, doors and seats, and the corridors it opens onto.
     /// Used by tests and the smoke test; a new game starts without one. Free of charge.
     /// </summary>
     public CareSpace BuildStarterWaitingRoom()
     {
         var o = new GridCoord(MainBuilding.Footprint.X, MainBuilding.Footprint.Y);
+
+        // The main corridor along the building and a short link down to the reception's inner door.
+        foreach (var (id, name, x, y, w, d) in new[] { ("corridor_main", "Main corridor", 4, 9, 56, 8), ("corridor_link", "Reception corridor", 22, 17, 8, 9) })
+        {
+            if (!_spaces.ContainsKey(id))
+            {
+                var corridorRect = RoomLayoutEngine.RectFor(new GridCoord(o.X + x, o.Y + y), w, d, WallSide.South);
+                _spaces[id] = RoomLayoutEngine.Build(Database.RoomTemplates["corridor"], Database, id, name, corridorRect, WallSide.South);
+            }
+        }
+
         var rect = RoomLayoutEngine.RectFor(new GridCoord(o.X + 15, o.Y + 26), 22, 14, WallSide.North);
         var plan = new RoomPlan("waiting_room", rect, WallSide.North);
-        var (room, chairs) = UpgradeOldWaitingRoom(plan, "waiting_room", "Waiting room");
+        var (room, chairs) = UpgradeOldWaitingRoom(plan, "waiting_room", "Reception");
         _spaces[room.Id] = room;
         _chairs.RemoveAll(c => room.Rect.Contains(c.Tile));
         _chairs.AddRange(chairs);
@@ -798,5 +688,41 @@ public sealed partial class SchoolSimulation
             .Select(s => new PlacedChair(s, WaitingRoomLayout.Opposite(plan.DoorSide), ChairColours.Default))
             .ToList();
         return (room, chairs);
+    }
+
+    // ---------------------------------------------------------------- doorways
+
+    /// <summary>The corridor tiles just outside each room's doors (and the entrances), which must stay clear.</summary>
+    private HashSet<GridCoord> DoorwayTiles()
+    {
+        var tiles = new HashSet<GridCoord>();
+        foreach (var space in _spaces.Values.Where(s => s.HasWalls))
+        {
+            var r = space.Rect;
+            foreach (var t in r.Tiles())
+            {
+                if (t.Y == r.Y && space.IsDoor(t, WallSide.North))
+                {
+                    tiles.Add(new GridCoord(t.X, t.Y - 1));
+                }
+
+                if (t.Y == r.Bottom - 1 && space.IsDoor(t, WallSide.South))
+                {
+                    tiles.Add(new GridCoord(t.X, t.Y + 1));
+                }
+
+                if (t.X == r.X && space.IsDoor(t, WallSide.West))
+                {
+                    tiles.Add(new GridCoord(t.X - 1, t.Y));
+                }
+
+                if (t.X == r.Right - 1 && space.IsDoor(t, WallSide.East))
+                {
+                    tiles.Add(new GridCoord(t.X + 1, t.Y));
+                }
+            }
+        }
+
+        return tiles;
     }
 }

@@ -5,15 +5,15 @@ namespace BlueprintSchool.Simulation.Core;
 
 /// <summary>
 /// Everything needed to restore a game. Each milestone adds its own state here
-/// (rooms, patients, staff, finances...). <see cref="FormatVersion"/> is bumped when the layout changes.
+/// (rooms, staff, finances...). <see cref="FormatVersion"/> is bumped when the layout changes.
 /// </summary>
 public sealed class SaveGame
 {
-    public const int CurrentFormatVersion = 4;
+    public const int CurrentFormatVersion = 1;
 
     public int FormatVersion { get; init; } = CurrentFormatVersion;
 
-    public string HospitalName { get; init; } = "Blueprint General Hospital";
+    public string SchoolName { get; init; } = "Blueprint Academy";
 
     /// <summary>Real-world time the file was written.</summary>
     public DateTime SavedAtUtc { get; init; }
@@ -22,10 +22,10 @@ public sealed class SaveGame
 
     public CameraState Camera { get; init; } = new(0, 0, 1);
 
-    /// <summary>Rooms, corridors, building extensions and money (format 2 onwards; absent in older saves).</summary>
+    /// <summary>Rooms, corridors, building extensions and money.</summary>
     public Simulation.LayoutState? Layout { get; init; }
 
-    /// <summary>Patients, staff, tasks, ambulances, statistics and accounts (format 3 onwards).</summary>
+    /// <summary>Staff, statistics and accounts.</summary>
     public Simulation.PeopleState? People { get; init; }
 }
 
@@ -33,7 +33,7 @@ public sealed class SaveGame
 public sealed record CameraState(double X, double Y, double Zoom);
 
 /// <summary>Summary shown in the Load Game list without loading the whole file.</summary>
-public sealed record SaveSlotInfo(string SlotName, string HospitalName, DateTime GameTime, DateTime SavedAtUtc);
+public sealed record SaveSlotInfo(string SlotName, string SchoolName, DateTime GameTime, DateTime SavedAtUtc);
 
 public static class SaveSerializer
 {

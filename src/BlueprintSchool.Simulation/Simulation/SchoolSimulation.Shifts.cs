@@ -9,8 +9,8 @@ namespace BlueprintSchool.Simulation.Simulation;
 /// team (20:00 to 08:00). Off-duty staff are not in the building. At shift change the outgoing team
 /// finish what they are doing and walk out of the main entrance; the incoming team walk in.
 /// Each shift has a 30-minute meal break and two 15-minute tea breaks at random times. On a break
-/// staff sit in the staff room and take no work. No more than a third of a team is away at once, and a
-/// break waits (for up to an hour) while a Red patient needs them.
+/// staff sit in the staff room. No more than a third of a team is away at once (unless a break has been
+/// put off for an hour). New hires join the day team; the school day itself comes with a later milestone.
 /// </summary>
 public sealed partial class SchoolSimulation
 {
@@ -20,7 +20,7 @@ public sealed partial class SchoolSimulation
     public const int MealBreakMinutes = 30;
     public const int TeaBreakMinutes = 15;
 
-    /// <summary>How long a planned break can be put off for patients before they go anyway.</summary>
+    /// <summary>How long a planned break can be put off before they go anyway.</summary>
     public static readonly TimeSpan MaxBreakDelay = TimeSpan.FromHours(1);
 
     /// <summary>A break this late is shown as put off.</summary>
@@ -28,7 +28,7 @@ public sealed partial class SchoolSimulation
 
     private GameRandom? _rotaRandom;
 
-    /// <summary>Break times have their own random numbers, so planning breaks doesn't change how patients turn out.</summary>
+    /// <summary>Break times have their own random numbers, so planning breaks doesn't change anything else.</summary>
     private GameRandom RotaRandom => _rotaRandom ??= new GameRandom(_options.Seed + 7919);
 
     /// <summary>The shift running now.</summary>
@@ -69,11 +69,6 @@ public sealed partial class SchoolSimulation
     /// <summary>The shift with fewer people of this role at this place, so a new hire evens things up (ties go to the shift running now).</summary>
     public StaffShift ShorterShift(StaffRole role, string? roomId)
     {
-        if (roomId is { } id && FindSpace(id) is { Kind: CareSpaceKind.Clinic or CareSpaceKind.OutpatientReception })
-        {
-            return StaffShift.Day;
-        }
-
         var day = _staff.Count(s => s.Role == role && s.BaseRoomId == roomId && s.Shift == StaffShift.Day);
         var night = _staff.Count(s => s.Role == role && s.BaseRoomId == roomId && s.Shift == StaffShift.Night);
         return day == night ? CurrentShift : day < night ? StaffShift.Day : StaffShift.Night;
@@ -101,8 +96,7 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>
-    /// Moves someone to work somewhere else: A&amp;E, a ward, a clinic, or another room of their kind.
-    /// Someone busy with a patient finishes that task first.
+    /// Moves someone to work somewhere else: the whole school or a room.
     /// </summary>
     public bool MoveStaff(int staffId, string? roomId)
     {
@@ -120,23 +114,15 @@ public sealed partial class SchoolSimulation
             return cancelled;
         }
 
-        if (member.CurrentTaskId is not null && member.IsOnDuty)
-        {
-            member.HasPendingMove = true;
-            member.PendingRoomId = roomId;
-            Notifications.Add(Now, NotificationLevel.Info, $"{member.Name} will move to {PlaceName(member.Role, roomId)} once they finish with their patient.");
-            return true;
-        }
-
         ApplyMove(member, roomId);
         return true;
     }
 
     /// <summary>Whether someone in this role can be based at <paramref name="roomId"/>.</summary>
     public bool CanMoveTo(StaffMember member, string? roomId) =>
-        PostingsFor(member.Role).Any(p => p.RoomId == roomId && (roomId is not null || !IsSpecialist(member.Role)));
+        PostingsFor(member.Role).Any(p => p.RoomId == roomId);
 
-    /// <summary>The name of a place someone can be based, e.g. "A&amp;E", "Whole hospital" or a room's name.</summary>
+    /// <summary>The name of a place someone can be based, e.g. "Whole school" or a room's name.</summary>
     public string PlaceName(StaffRole role, string? roomId) =>
         roomId is { } id && FindSpace(id) is { } room ? room.Name : PostingsFor(role)[0].Name;
 
@@ -158,9 +144,8 @@ public sealed partial class SchoolSimulation
         member.HasPendingMove = false;
         member.PendingRoomId = null;
         member.BaseRoomId = roomId;
-        member.Caseload.Clear();
         Notifications.Add(Now, NotificationLevel.Info, $"{member.Name} ({member.Grade}) now works in {PlaceName(member.Role, roomId)}.");
-        if (member.IsOnDuty && !member.IsOnBreak && member.CurrentTaskId is null)
+        if (member.IsOnDuty && !member.IsOnBreak)
         {
             member.Activity = StaffActivity.Idle;
             member.StatusText = "Available";
@@ -207,8 +192,7 @@ public sealed partial class SchoolSimulation
                 return true;
         }
 
-        var free = member.CurrentTaskId is null && !member.IsOnBreak && member.PushingPatientId is null
-                   && !_consults.Values.Any(c => c.StaffId == member.Id);
+        var free = !member.IsOnBreak;
         if (free && member.HasPendingMove)
         {
             ApplyMove(member, member.PendingRoomId);
@@ -228,7 +212,6 @@ public sealed partial class SchoolSimulation
         member.Fatigue = Math.Min(member.Fatigue, RotaRandom.Range(0.0, 0.1));
         member.Activity = StaffActivity.Idle;
         member.StatusText = "Arriving for the shift";
-        member.CurrentTaskId = null;
         member.PlaceAt(WalkInSpawn);
         PlanBreaks(member, CurrentShiftStart);
         WalkTo(member, HomeTile(member));
@@ -240,7 +223,6 @@ public sealed partial class SchoolSimulation
         member.StatusText = "Shift over: going home";
         member.BreakEndsAt = null;
         member.Breaks.Clear();
-        member.Caseload.Clear();
         foreach (var room in _spaces.Values.Where(r => r.ReservedByStaffId == member.Id))
         {
             room.ReservedByStaffId = null;
@@ -273,19 +255,14 @@ public sealed partial class SchoolSimulation
         member.Breaks.FirstOrDefault(b => b.TakenAt is null && !b.Done && Now >= b.Start);
 
     /// <summary>
-    /// Whether a member of staff can go on their due break: not while a Red patient is waiting for
-    /// them, and not while a third of their team is already away (unless it's been put off an hour).
+    /// Whether a member of staff can go on their due break: not while a third of their team is already
+    /// away (unless it's been put off an hour).
     /// </summary>
-    private bool CanTakeBreak(StaffMember member, PlannedBreak due, ClinicalTask? bestTask)
+    private bool CanTakeBreak(StaffMember member, PlannedBreak due)
     {
         if (due.Requested || Now - due.Start >= MaxBreakDelay)
         {
             return true;
-        }
-
-        if (bestTask is not null && bestTask.Priority >= RedOngoing)
-        {
-            return false;
         }
 
         var team = _staff.Where(s => s.IsOnDuty && s.Role == member.Role && s.BaseRoomId == member.BaseRoomId).ToList();
@@ -302,31 +279,6 @@ public sealed partial class SchoolSimulation
         foreach (var b in member.Breaks.Where(b => b.TakenAt is not null && !b.Done))
         {
             b.Done = true;
-        }
-    }
-
-    /// <summary>Gives everyone a team for an old save: each place's staff are split between day and night.</summary>
-    private void SplitIntoTeams()
-    {
-        foreach (var group in _staff.GroupBy(s => (s.Role, s.BaseRoomId)))
-        {
-            var i = 0;
-            foreach (var member in group.OrderBy(s => s.Id))
-            {
-                var clinic = member.BaseRoomId is { } id && FindSpace(id) is { Kind: CareSpaceKind.Clinic or CareSpaceKind.OutpatientReception };
-                member.Shift = clinic || i++ % 2 == 0 ? StaffShift.Day : StaffShift.Night;
-            }
-        }
-
-        foreach (var member in _staff.Where(s => s.Shift == CurrentShift))
-        {
-            PlanBreaks(member, CurrentShiftStart);
-        }
-
-        foreach (var member in _staff.Where(s => s.Shift != CurrentShift && s.CurrentTaskId is null && !s.IsOnBreak))
-        {
-            member.Activity = StaffActivity.OffDuty;
-            member.StatusText = OffDutyText(member);
         }
     }
 }

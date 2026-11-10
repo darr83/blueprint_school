@@ -35,13 +35,13 @@ public class BuildMenuTests
     }
 
     [Fact]
-    public void Maternity_and_toilet_rooms_have_their_icons()
+    public void School_and_toilet_rooms_have_their_icons()
     {
         var (_, menu) = Shipped();
-        var maternity = menu.Icons.Single(i => i.Id == "maternity");
-        foreach (var id in new[] { "delivery_room", "mother_baby_ward", "neonatal_unit", "caesarean_theatre", "antenatal_clinic", "antenatal_scan_room" })
+        var school = menu.Icons.Single(i => i.Id == "school");
+        foreach (var id in new[] { "waiting_room", "staff_room" })
         {
-            Assert.Contains(id, maternity.Items);
+            Assert.Contains(id, school.Items);
         }
 
         var facilities = menu.Icons.Single(i => i.Id == "facilities");
@@ -55,9 +55,7 @@ public class BuildMenuTests
     public void Shared_rooms_appear_under_several_departments()
     {
         var (_, menu) = Shipped();
-        Assert.True(menu.IconsWith("operating_theatre").Count() >= 3);
-        Assert.True(menu.IconsWith("nurses_station").Count() >= 5);
-        Assert.True(menu.IconsWith("xray_room").Count() >= 2);
+        Assert.True(menu.IconsWith("waiting_chairs").Count() >= 2);
     }
 
     [Fact]
@@ -77,16 +75,16 @@ public class BuildMenuTests
         var menu = BuildMenu.Parse("""
             { "groups": [
               { "name": "A", "icons": [
-                { "id": "emergency", "label": "A&E", "name": "A&E", "department": "emergency", "items": ["triage_room", "no_such_room"] },
-                { "id": "ghost", "label": "Ghost", "name": "Ghost", "department": "no_such_department", "items": ["resus_bay"] },
+                { "id": "school", "label": "School", "name": "School", "department": "school", "items": ["staff_room", "no_such_room"] },
+                { "id": "ghost", "label": "Ghost", "name": "Ghost", "department": "no_such_department", "items": ["waiting_room"] },
                 { "id": "misc", "label": "Misc", "name": "Misc", "catch_all": true, "items": [] }
               ] } ] }
             """).Resolve(db);
 
         var icons = menu.Icons.ToList();
-        Assert.Equal(new[] { "emergency", "misc" }, icons.Select(i => i.Id));
+        Assert.Equal(new[] { "school", "misc" }, icons.Select(i => i.Id));
         Assert.DoesNotContain("no_such_room", icons[0].Items);
-        Assert.Contains("resus_bay", icons[0].Items);
-        Assert.Contains("cath_lab", icons[1].Items);
+        Assert.Contains("waiting_room", icons[0].Items);
+        Assert.Contains("public_toilets", icons[1].Items);
     }
 }

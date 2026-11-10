@@ -1,12 +1,12 @@
 namespace BlueprintSchool.Simulation.World;
 
-/// <summary>Builds the site layout a new game starts with: one hospital building, roads, parking and an ambulance bay.</summary>
+/// <summary>Builds the site layout a new game starts with: one school building, roads and parking.</summary>
 public static class StarterSite
 {
     public const int SiteWidth = 160;   // 80 m
     public const int SiteLength = 120;  // 60 m
 
-    /// <summary>The main hospital building: 30 m x 20 m.</summary>
+    /// <summary>The main school building: 30 m x 20 m.</summary>
     public static readonly GridRect MainBuildingFootprint = new(40, 30, 60, 40);
 
     public static SiteMap Create()
@@ -27,12 +27,11 @@ public static class StarterSite
         // Car park to the south-west.
         site.Fill(new GridRect(b.X - 4, b.Bottom + 4, 24, 10), TileKind.Parking);
 
-        // Ambulance bay to the east, joined to the side road.
-        site.Fill(new GridRect(b.Right + 4, b.Y + 6, 10, 14), TileKind.AmbulanceBay);
+        var building = new Building("main", "Main School Building", b);
+        building.AddEntrance(new Entrance("main_entrance", "Main entrance", new GridCoord(b.X + 22, b.Bottom - 1), WallSide.South, 8));
 
-        var building = new Building("main", "Main Hospital Building", b);
-        building.AddEntrance(new Entrance("main_entrance", "Main entrance", new GridCoord(b.X + 22, b.Bottom - 1), WallSide.South, 8, false));
-        building.AddEntrance(new Entrance("ambulance_entrance", "Ambulance entrance", new GridCoord(b.Right - 1, b.Y + 9), WallSide.East, 8, true));
+        // A side door on the east wall for staff and deliveries, where the main corridor ends.
+        building.AddEntrance(new Entrance("side_entrance", "Side entrance", new GridCoord(b.Right - 1, b.Y + 9), WallSide.East, 8));
         site.AddBuilding(building);
 
         return site;

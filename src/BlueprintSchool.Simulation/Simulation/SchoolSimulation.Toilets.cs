@@ -1,8 +1,6 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Medical;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
@@ -27,7 +25,7 @@ public enum ToiletStage
 /// <summary>A wet patch on the floor where someone couldn't get to a toilet in time. The cleaners mop it up after a while.</summary>
 public sealed record FloorAccident(GridCoord Tile, DateTime Until);
 
-/// <summary>A trip to the toilet by a waiting patient, an outpatient or a member of staff on a break.</summary>
+/// <summary>A trip to the toilet by a member of staff on a break.</summary>
 public sealed class ToiletTrip
 {
     public required Agent Person { get; init; }
@@ -50,41 +48,17 @@ public sealed class ToiletTrip
 }
 
 /// <summary>
-/// Toilets. Patients waiting in A&amp;E and outpatients waiting for their clinic need the toilet now and
-/// then (sooner after a drink from the cafe). They walk to the nearest free toilet, wait just inside the
-/// door if every cubicle is in use, wash their hands and go back to their seat. Older patients use the
-/// accessible toilet first. Staff on a break sometimes pop to the staff toilet, or to the public ones when
-/// there isn't one. A hospital with no public toilets makes waiting patients more likely to give up.
-/// Called away while they are there, people simply go straight to whoever called them.
+/// Toilets. Staff on a break sometimes pop to the staff toilet, or to the public ones when there isn't one.
+/// They walk to the nearest free toilet, wait just inside the door if every cubicle is in use, wash their
+/// hands and go back to their seat. Pupils will use them too once they arrive.
 /// </summary>
 public sealed partial class SchoolSimulation
 {
-    /// <summary>How long a patient waits before they might need the toilet.</summary>
-    public static readonly TimeSpan ToiletAfterWaiting = TimeSpan.FromMinutes(30);
-
     /// <summary>After going, how long before they might need to go again.</summary>
     public static readonly TimeSpan ToiletGap = TimeSpan.FromMinutes(90);
 
-    /// <summary>A patient older than this uses the accessible toilet when there is one.</summary>
-    public const int AccessibleToiletAge = 75;
-
-    /// <summary>With no public toilets, waiting patients are this much more likely to walk out.</summary>
-    public const double NoToiletsWalkOutFactor = 1.5;
-
-    /// <summary>The chance that an adult who needs the toilet and can't get to one has an accident on the floor.</summary>
-    public const double AccidentChance = 0.05;
-
-    /// <summary>Children are this much more likely to have an accident. (Raise it further for a children's hospital.)</summary>
-    public const double ChildAccidentMultiplier = 3.0;
-
-    /// <summary>Patients younger than this count as children.</summary>
-    public const int ChildAge = 12;
-
     /// <summary>How long a wet patch stays before the cleaners have mopped it up.</summary>
     public static readonly TimeSpan AccidentCleanedAfter = TimeSpan.FromMinutes(30);
-
-    /// <summary>On average, an eligible waiting patient needs the toilet about once in this many minutes.</summary>
-    private const double ToiletEveryMinutes = 120;
 
     /// <summary>On average, a member of staff on a break goes about once in this many minutes.</summary>
     private const double StaffToiletEveryMinutes = 15;
@@ -103,7 +77,7 @@ public sealed partial class SchoolSimulation
     /// <summary>Public toilets, accessible toilets and staff toilets.</summary>
     public IEnumerable<CareSpace> ToiletRooms => _spaces.Values.Where(s => s.IsToilet);
 
-    /// <summary>True when patients and visitors have a toilet they can use.</summary>
+    /// <summary>True when pupils and visitors have a toilet they can use.</summary>
     public bool HasPublicToilets => _spaces.Values.Any(s => s.Kind is CareSpaceKind.Toilets or CareSpaceKind.AccessibleToilet);
 
     /// <summary>Everyone on their way to, in or washing up after the toilet right now.</summary>
@@ -111,9 +85,6 @@ public sealed partial class SchoolSimulation
 
     /// <summary>Wet patches on the floor waiting to be mopped up.</summary>
     public IReadOnlyList<FloorAccident> FloorAccidents => _accidents;
-
-    /// <summary>How likely a patient of this age is to have an accident when they can't get to a toilet.</summary>
-    public static double AccidentChanceFor(int age) => age < ChildAge ? AccidentChance * ChildAccidentMultiplier : AccidentChance;
 
     /// <summary>Leaves a wet patch on a tile, as an accident would (for tests and screenshots).</summary>
     public void SpillForTest(GridCoord tile) => _accidents.Add(new FloorAccident(tile, Now + AccidentCleanedAfter));
@@ -152,35 +123,9 @@ public sealed partial class SchoolSimulation
 
         _accidents.RemoveAll(a => Now >= a.Until);
 
-        // Patients need the toilet whether or not there is one to go to.
-        var chance = dt / (ToiletEveryMinutes * 60);
-        foreach (var patient in _patients.Values.Where(CanGoToToilet).ToList())
-        {
-            // A drink in the last hour makes it twice as likely.
-            var drank = patient.LastRefreshmentAt is { } had && Now - had < TimeSpan.FromHours(1);
-            if (ToiletRandom.Chance(drank ? chance * 2 : chance)
-                && !StartToiletTrip(patient, rooms, preferAccessible: patient.Age >= AccessibleToiletAge, staff: false)
-                && !rooms.Any(r => UsableBy(r, staff: false)))
-            {
-                // Nowhere to go at all: they hold on, or now and then don't make it.
-                NoToiletFor(patient);
-            }
-        }
-
         if (rooms.Count == 0)
         {
             return;
-        }
-
-        SendStrandedBackFromToilets(rooms);
-
-        foreach (var outpatient in _outpatients.Where(CanGoToToilet).ToList())
-        {
-            var drank = outpatient.LastRefreshmentAt is { } had && Now - had < TimeSpan.FromHours(1);
-            if (ToiletRandom.Chance(drank ? chance * 2 : chance))
-            {
-                StartToiletTrip(outpatient, rooms, preferAccessible: false, staff: false);
-            }
         }
 
         var staffChance = dt / (StaffToiletEveryMinutes * 60);
@@ -195,29 +140,11 @@ public sealed partial class SchoolSimulation
 
     private bool RecentlyWent(Agent person) => _lastToiletAt.TryGetValue(person, out var at) && Now - at < ToiletGap;
 
-    private bool Away(Agent person) => _toiletTrips.ContainsKey(person) || _trips.ContainsKey(person);
-
-    /// <summary>A walking A&amp;E patient sitting in the waiting room (not Red) who has waited a while.</summary>
-    private bool CanGoToToilet(Patient p) =>
-        p.Stage is PatientStage.WaitingForTriage or PatientStage.WaitingForSpace
-        && p.Triage != TriageCategory.Red
-        && p.Mobility == Mobility.Walking
-        && p.Seat is { } seat && p.Tile == seat && !p.IsMoving
-        && p.BusyWithTaskId is null && p.CareSpaceId is null && p.PendingMove is null
-        && Now - p.QueuedSince >= ToiletAfterWaiting
-        && !Away(p) && !RecentlyWent(p);
-
-    /// <summary>A checked-in clinic patient sitting down, whose appointment isn't due for a while.</summary>
-    private bool CanGoToToilet(Outpatient o) =>
-        o.Stage == OutpatientStage.Waiting
-        && o.Seat is { } seat && o.Tile == seat && !o.IsMoving
-        && FindAppointment(o.AppointmentId) is { } appointment && appointment.Time - Now >= TimeSpan.FromMinutes(15)
-        && appointment.CheckedInAt is { } checkedIn && Now - checkedIn >= TimeSpan.FromMinutes(10)
-        && !Away(o) && !RecentlyWent(o);
+    private bool Away(Agent person) => _toiletTrips.ContainsKey(person);
 
     /// <summary>Staff sitting down on a break with at least a few minutes of it left.</summary>
     private bool CanGoToToilet(StaffMember m) =>
-        m.Activity == StaffActivity.OnBreak && !m.IsMoving && m.CurrentTaskId is null
+        m.Activity == StaffActivity.OnBreak && !m.IsMoving
         && m.BreakEndsAt is { } ends && ends - Now >= TimeSpan.FromMinutes(6)
         && !Away(m) && !RecentlyWent(m);
 
@@ -231,10 +158,7 @@ public sealed partial class SchoolSimulation
 
         return trip.Person switch
         {
-            Patient p => p.Stage is not (PatientStage.WaitingForTriage or PatientStage.WaitingForSpace)
-                         || p.BusyWithTaskId is not null || p.CareSpaceId is not null || p.PendingMove is not null,
-            Outpatient o => o.Stage != OutpatientStage.Waiting,
-            StaffMember m => m.Activity != StaffActivity.OnBreak || m.CurrentTaskId is not null,
+            StaffMember m => m.Activity != StaffActivity.OnBreak,
             _ => true,
         };
     }
@@ -246,29 +170,10 @@ public sealed partial class SchoolSimulation
     private bool UsableBy(CareSpace room, bool staff) =>
         room.Kind != CareSpaceKind.StaffToilet || staff;
 
-    /// <summary>
-    /// A patient who needed the toilet and couldn't get to one: they hold on (and won't ask again for a
-    /// while), but sometimes don't make it and leave a wet patch on the floor for the cleaners.
-    /// </summary>
-    private void NoToiletFor(Patient patient)
-    {
-        _lastToiletAt[patient] = Now;
-        if (!ToiletRandom.Chance(AccidentChanceFor(patient.Age)))
-        {
-            return;
-        }
-
-        _accidents.Add(new FloorAccident(patient.Tile, Now + AccidentCleanedAfter));
-        Tally(StatKeys.ToiletAccidents);
-        patient.Log(Now, "Couldn't get to a toilet in time and had an accident.", important: true);
-        var why = HasPublicToilets ? "the toilets were too busy" : "the hospital has no toilets";
-        Notifications.Add(Now, NotificationLevel.Warning, $"{patient.FullName} had an accident on the floor because {why}.", patient.Id, null, patient.Triage);
-    }
-
     /// <summary>Sends someone to the nearest free toilet, or to queue for one. False when there was nowhere to go.</summary>
     private bool StartToiletTrip(Agent person, IReadOnlyList<CareSpace> rooms, bool preferAccessible, bool staff)
     {
-        // The nearest, with a pull towards the right kind: staff to their own toilet, older patients to the accessible one.
+        // The nearest, with a pull towards the right kind: staff to their own toilet.
         var choices = rooms
             .Where(r => UsableBy(r, staff) && r.ToiletSpots.Count > 0)
             .Select(r => (Room: r, Score: Distance(person.Tile, r.PatientSpot)
@@ -316,14 +221,9 @@ public sealed partial class SchoolSimulation
     {
         _toiletTrips[trip.Person] = trip;
         Move(trip.Person, trip.Target);
-        switch (trip.Person)
+        if (trip.Person is StaffMember m)
         {
-            case Outpatient o:
-                o.StatusText = "Gone to the toilet";
-                break;
-            case StaffMember m:
-                m.StatusText = $"On a break · at the toilet · back at {m.BreakEndsAt:HH:mm}";
-                break;
+            m.StatusText = $"On a break · at the toilet · back at {m.BreakEndsAt:HH:mm}";
         }
     }
 
@@ -357,20 +257,12 @@ public sealed partial class SchoolSimulation
                 else if (trip.QueuedAt is { } since && Now - since >= MaxToiletQueue)
                 {
                     ToiletGoBack(trip);
-                    if (person is Patient waited)
-                    {
-                        NoToiletFor(waited);
-                    }
                 }
 
                 break;
 
             case ToiletStage.Using when Now >= trip.Until:
                 _lastToiletAt[person] = Now;
-                if (person is Patient p)
-                {
-                    p.Log(Now, $"Went to the toilet ({room.Name}).");
-                }
 
                 if (room.SinkSpots.Count > 0)
                 {
@@ -401,79 +293,21 @@ public sealed partial class SchoolSimulation
     private void ToiletGoBack(ToiletTrip trip)
     {
         _toiletTrips.Remove(trip.Person);
-        switch (trip.Person)
+        if (trip.Person is StaffMember m)
         {
-            case Patient p:
-                if (p.Seat is { } seat)
-                {
-                    WalkTo(p, seat);
-                }
-                else
-                {
-                    SendToWaitingRoom(p);
-                }
-
-                break;
-            case Outpatient o:
-                o.StatusText = "Waiting";
-                if (o.Seat is { } chair)
-                {
-                    Walk(o, chair);
-                }
-
-                break;
-            case StaffMember m:
-                m.StatusText = $"On a break · back at {m.BreakEndsAt:HH:mm}";
-                if (trip.ReturnTo is { } back)
-                {
-                    WalkTo(m, back);
-                }
-
-                break;
-        }
-    }
-
-    /// <summary>Waiting patients left in a toilet room without a trip (after loading a game) go back to their seat.</summary>
-    private void SendStrandedBackFromToilets(IReadOnlyList<CareSpace> rooms)
-    {
-        bool InRoom(Agent a) => rooms.Any(r => r.Rect.Contains(a.Tile));
-
-        foreach (var p in _patients.Values)
-        {
-            if (p.Stage is PatientStage.WaitingForTriage or PatientStage.WaitingForSpace
-                && !p.IsMoving && p.BusyWithTaskId is null && p.PendingMove is null && p.CareSpaceId is null
-                && !Away(p) && p.Seat is { } seat && p.Tile != seat && InRoom(p))
+            m.StatusText = $"On a break · back at {m.BreakEndsAt:HH:mm}";
+            if (trip.ReturnTo is { } back)
             {
-                WalkTo(p, seat);
-            }
-        }
-
-        foreach (var o in _outpatients)
-        {
-            if (o.Stage == OutpatientStage.Waiting && !o.IsMoving && !Away(o) && o.Seat is { } seat && o.Tile != seat && InRoom(o))
-            {
-                o.StatusText = "Waiting";
-                Walk(o, seat);
+                WalkTo(m, back);
             }
         }
     }
 
     private void Move(Agent person, GridCoord tile)
     {
-        switch (person)
+        if (person is StaffMember m)
         {
-            case Patient p:
-                WalkTo(p, tile);
-                break;
-            case Outpatient o:
-                Walk(o, tile);
-                break;
-            case StaffMember m:
-                WalkTo(m, tile);
-                break;
+            WalkTo(m, tile);
         }
     }
-
-    /// <summary>With nowhere for them to go, waiting patients give up sooner.</summary>
-    private double ToiletWalkOutFactor() => HasPublicToilets ? 1.0 : NoToiletsWalkOutFactor;
 }

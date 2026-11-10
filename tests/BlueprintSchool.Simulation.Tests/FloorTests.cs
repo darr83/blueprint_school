@@ -1,9 +1,6 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Medical;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Simulation;
-using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Tests;
@@ -12,16 +9,20 @@ public class FloorTests
 {
     private static readonly GridRect B = StarterSite.MainBuildingFootprint;
 
-    /// <summary>A lift beside the nurses' station, its door onto the main A&amp;E corridor.</summary>
+    /// <summary>A lift south of the main corridor, its door onto it.</summary>
     private static readonly GridRect LiftRect = new(B.X + 48, B.Y + 17, 5, 6);
 
     /// <summary>Stairs next to it.</summary>
     private static readonly GridRect StairsRect = new(B.X + 54, B.Y + 17, 5, 8);
 
+    /// <summary>The main corridor along the ground floor, the way most schools start.</summary>
+    private static readonly GridRect MainCorridor = new(B.X + 4, B.Y + 9, 56, 8);
+
     private static SimulationHarness Rich(int seed = 1234)
     {
         var h = new SimulationHarness(seed);
         h.Sim.AdjustBalance(5_000_000);
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", MainCorridor, WallSide.South)).CanBuild);
         return h;
     }
 
@@ -33,8 +34,8 @@ public class FloorTests
         Assert.True(check.CanBuild, $"{template}: {string.Join("; ", check.Problems)}");
     }
 
-    /// <summary>Floor 1: a corridor along the same line as the A&amp;E corridor below, starting from the lift (or stairs) door.</summary>
-    private static GridRect UpstairsCorridor(SimulationHarness h) => Up(h, new GridRect(B.X + 4, B.Y + 9, 56, 8));
+    /// <summary>Floor 1: a corridor along the same line as the main corridor below, starting from the lift (or stairs) door.</summary>
+    private static GridRect UpstairsCorridor(SimulationHarness h) => Up(h, MainCorridor);
 
     [Fact]
     public void Adding_a_floor_costs_money_and_copies_the_outline()
@@ -88,23 +89,9 @@ public class FloorTests
         Assert.Equal(2, h.Sim.Spaces.Count(s => s.Kind == CareSpaceKind.Lift));
         Build(h, "corridor", UpstairsCorridor(h));
 
-        // A ward upstairs, reached through the lift.
-        Build(h, "emergency_ward", Up(h, new GridRect(B.X + 20, B.Y + 17, 14, 10)));
-        Assert.Contains(h.Sim.Spaces, s => s.IsWard && h.Sim.FloorOf(s) == 1);
-    }
-
-    [Fact]
-    public void Wards_upstairs_need_a_lift_but_a_staff_room_is_fine_with_stairs()
-    {
-        var h = Rich();
-        h.Sim.AddFloor();
-        Build(h, "stairs", StairsRect);
-        Build(h, "corridor", UpstairsCorridor(h));
-
-        var ward = h.Sim.CheckRoomAt("emergency_ward", Up(h, new GridRect(B.X + 20, B.Y + 17, 14, 10)));
-        Assert.Contains(ward.Problems, p => p.Contains("needs a lift"));
-
-        Build(h, "staff_room", Up(h, new GridRect(B.X + 4, B.Y + 17, 8, 8)));
+        // A staff room upstairs, reached through the lift.
+        Build(h, "staff_room", Up(h, new GridRect(B.X + 20, B.Y + 17, 14, 10)));
+        Assert.Contains(h.Sim.Spaces, s => s.Kind == CareSpaceKind.StaffRoom && h.Sim.FloorOf(s) == 1);
     }
 
     [Fact]
@@ -148,7 +135,7 @@ public class FloorTests
     }
 
     [Fact]
-    public void Walkers_take_the_stairs_for_one_floor_and_trolleys_always_take_the_lift()
+    public void Walkers_take_the_stairs_for_one_floor_and_step_free_routes_take_the_lift()
     {
         var h = Rich();
         h.Sim.AddFloor();
@@ -206,7 +193,7 @@ public class FloorTests
         h.Sim.AddFloor();
         Build(h, "lift", LiftRect);
         Build(h, "corridor", UpstairsCorridor(h));
-        Build(h, "emergency_ward", Up(h, new GridRect(B.X + 20, B.Y + 17, 14, 10)));
+        Build(h, "staff_room", Up(h, new GridRect(B.X + 20, B.Y + 17, 14, 10)));
         var layout = h.Sim.CaptureLayout();
         Assert.Equal(2, layout.Floors);
 
@@ -214,10 +201,10 @@ public class FloorTests
         loaded.Sim.RestoreLayout(layout);
         Assert.Equal(2, loaded.Sim.FloorCount);
         Assert.Equal(2, loaded.Sim.Spaces.Count(s => s.Kind == CareSpaceKind.Lift));
-        Assert.Contains(loaded.Sim.Spaces, s => s.IsWard && loaded.Sim.FloorOf(s) == 1);
+        Assert.Contains(loaded.Sim.Spaces, s => s.Kind == CareSpaceKind.StaffRoom && loaded.Sim.FloorOf(s) == 1);
         Assert.Contains(loaded.Sim.Nav.Links, l => l.Link.StepFree);
 
-        // A save from before floors existed has no floor count, and loads as one floor.
+        // A layout with no floor count loads as one floor.
         var old = new LayoutState { Balance = 1000 };
         var fresh = new SimulationHarness();
         fresh.Sim.RestoreLayout(old);
@@ -234,71 +221,6 @@ public class FloorTests
         Assert.Equal(single * 2, h.Sim.CheckExtension(area).Cost);
         Assert.True(h.Sim.ExtendBuilding(area).CanBuild);
         Assert.True(h.Sim.Site.IsIndoors(h.Sim.Site.OnFloor(new GridCoord(B.X - 5, B.Y + 5), 1)));
-    }
-
-    [Fact]
-    public void A_porter_takes_a_poorly_patient_up_in_the_lift_to_xray()
-    {
-        // Whether the doctor orders a chest X-ray depends on the dice: with some seeds the history and
-        // exam alone make them sure enough. Tiny maths differences between Windows and Linux can change
-        // which seeds those are, so try seeds in turn until one orders the X-ray, then check the trip.
-        for (var seed = 1; seed <= 20; seed++)
-        {
-            if (TryLiftTripToXray(seed))
-            {
-                return;
-            }
-        }
-
-        Assert.Fail("No seed from 1 to 20 had the doctor order a chest X-ray.");
-    }
-
-    private static bool TryLiftTripToXray(int seed)
-    {
-        var h = Rich(seed);
-        h.Sim.AddFloor();
-        Build(h, "lift", LiftRect);
-        Build(h, "stairs", StairsRect);
-        Build(h, "corridor", UpstairsCorridor(h));
-        Build(h, "xray_room", Up(h, new GridRect(B.X + 20, B.Y + 17, 9, 9)));
-        h.StaffToRecommended();
-
-        var lifts = h.Sim.Spaces.Where(s => s.Kind == CareSpaceKind.Lift).Select(s => s.PatientSpot).ToHashSet();
-        var stairs = h.Sim.Spaces.Where(s => s.Kind == CareSpaceKind.Stairs).Select(s => s.PatientSpot).ToHashSet();
-        var patient = h.Sim.SpawnPatient(ArrivalMethod.Ambulance, "community_acquired_pneumonia");
-        var usedLift = false;
-        var usedStairs = false;
-        var pushedUpstairs = false;
-        var maxGap = 0.0;
-        h.RunUntil(() =>
-        {
-            usedLift |= lifts.Contains(patient.Tile) && patient.PushedByStaffId is not null;
-            usedStairs |= stairs.Contains(patient.Tile) && patient.PushedByStaffId is not null;
-            if (patient.PushedByStaffId is { } id && h.Sim.FindStaff(id) is { } porter && patient.IsMoving && h.Sim.FloorOf(patient) == 1)
-            {
-                pushedUpstairs = true;
-                Assert.Equal(1, h.Sim.FloorOf(porter));
-                maxGap = Math.Max(maxGap, Math.Sqrt(Math.Pow(porter.X - patient.X, 2) + Math.Pow(porter.Y - patient.Y, 2)));
-            }
-
-            var xrayOrdered = patient.Investigations.Any(o => o.InvestigationId == "chest_xray");
-            return (xrayOrdered && patient.Investigations.Any(o => o.InvestigationId == "chest_xray" && o.Status != InvestigationStatus.Requested))
-                || (!xrayOrdered && patient.WorkingDiagnosis is not null)
-                || patient.Stage == PatientStage.Gone;
-        }, TimeSpan.FromHours(8), "the chest X-ray upstairs");
-
-        if (!patient.Investigations.Any(o => o.InvestigationId == "chest_xray"))
-        {
-            return false;
-        }
-
-        var journey = h.Journey(patient);
-        Assert.Contains("Chest X-ray done by", journey);
-        Assert.True(usedLift, journey);
-        Assert.False(usedStairs, journey);
-        Assert.True(pushedUpstairs, journey);
-        Assert.InRange(maxGap, 0.0, 3.5);
-        return true;
     }
 
     private sealed class TestWalker : Agent;

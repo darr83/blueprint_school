@@ -1,5 +1,4 @@
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
@@ -19,7 +18,7 @@ public class ToiletTests
     /// <summary>A west wing with a corridor and, south of it, a toilet block, an accessible toilet and a staff toilet.</summary>
     private static SimulationHarness WithToilets(bool publicToilets = true, bool accessible = true, bool staff = true)
     {
-        var h = new SimulationHarness(5);
+        var h = new SimulationHarness(5, mainCorridor: true);
         h.Sim.AdjustBalance(2_000_000);
         Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 30, B.Y, 30, 34)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 30, B.Y + 9, 34, 8), WallSide.South)).CanBuild);
@@ -88,75 +87,33 @@ public class ToiletTests
     }
 
     [Fact]
-    public void Waiting_patients_use_the_toilet_wash_their_hands_and_go_back_to_their_seat()
+    public void Staff_on_a_break_use_the_toilet_and_wash_their_hands()
     {
-        var h = WithToilets(staff: false);
-        var patients = Enumerable.Range(0, 14).Select(_ => h.Sim.SpawnPatient(ArrivalMethod.WalkIn, "simple_laceration")).ToList();
+        var h = WithToilets();
+        foreach (var _ in Enumerable.Range(0, 6))
+        {
+            h.Sim.HireStaff(StaffRole.Teacher);
+        }
 
-        h.RunUntil(() => h.Sim.ToiletTrips.Any(t => t.Person is Patient), TimeSpan.FromHours(6), "a waiting patient to go to the toilet");
-        var trip = h.Sim.ToiletTrips.First(t => t.Person is Patient);
-        var patient = (Patient)trip.Person;
-        var room = h.Sim.ToiletRooms.Single(r => r.Id == trip.RoomId);
-        Assert.NotEqual(CareSpaceKind.StaffToilet, room.Kind);
+        ToiletTrip? trip = null;
+        h.RunUntil(() => (trip = h.Sim.ToiletTrips.FirstOrDefault()) is not null, TimeSpan.FromHours(12), "a member of staff to go to the toilet on a break");
+        var member = Assert.IsType<StaffMember>(trip!.Person);
+        Assert.True(member.IsOnBreak);
 
         var washed = false;
         h.RunUntil(() =>
         {
-            washed |= h.Sim.ToiletTripOf(patient)?.Stage == ToiletStage.Washing;
-            return h.Sim.ToiletTripOf(patient) is null;
-        }, TimeSpan.FromMinutes(40), "the patient to finish at the toilet");
-
-        h.RunFor(TimeSpan.FromMinutes(5));
-        if (patient.Stage is PatientStage.WaitingForTriage or PatientStage.WaitingForSpace && patient.BusyWithTaskId is null)
-        {
-            Assert.True(washed, "the patient didn't wash their hands");
-            Assert.Contains(patient.Timeline, e => e.Text.StartsWith("Went to the toilet"));
-            Assert.False(h.Sim.ToiletRooms.Any(r => r.Rect.Contains(patient.Tile)), "patient left in the toilets");
-        }
+            washed |= h.Sim.ToiletTripOf(member)?.Stage == ToiletStage.Washing;
+            return h.Sim.ToiletTripOf(member) is null;
+        }, TimeSpan.FromMinutes(30), "them to finish at the toilet");
+        Assert.True(washed, "they didn't wash their hands");
     }
 
     [Fact]
-    public void Staff_on_a_break_use_the_staff_toilet_and_patients_never_do()
+    public void Public_toilets_count_as_toilets_for_pupils_and_visitors()
     {
-        var h = WithToilets();
-        foreach (var _ in Enumerable.Range(0, 10))
-        {
-            h.Sim.SpawnPatient(ArrivalMethod.WalkIn, "simple_laceration");
-        }
-
-        var staffToilet = h.Sim.ToiletRooms.Single(r => r.Kind == CareSpaceKind.StaffToilet);
-        var staffWent = false;
-        for (var i = 0; i < 24 * 60 && !staffWent; i++)
-        {
-            h.RunFor(TimeSpan.FromMinutes(1));
-            Assert.DoesNotContain(h.Sim.ToiletTrips, t => t.RoomId == staffToilet.Id && t.Person is not StaffMember);
-            staffWent = h.Sim.ToiletTrips.Any(t => t.Person is StaffMember);
-        }
-
-        Assert.True(staffWent, "no member of staff went to the toilet on a break in a day");
-    }
-
-    [Fact]
-    public void Without_public_toilets_patients_walk_out_more_and_sometimes_have_an_accident()
-    {
-        var h = WithToilets(publicToilets: false, accessible: false, staff: true);
-        Assert.False(h.Sim.HasPublicToilets);
-        Assert.Equal(0.05, SchoolSimulation.AccidentChanceFor(40), 6);
-        Assert.True(SchoolSimulation.AccidentChanceFor(6) > SchoolSimulation.AccidentChanceFor(40));
-
-        foreach (var _ in Enumerable.Range(0, 20))
-        {
-            h.Sim.SpawnPatient(ArrivalMethod.WalkIn, "simple_laceration");
-        }
-
-        for (var i = 0; i < 12 * 60; i++)
-        {
-            h.RunFor(TimeSpan.FromMinutes(1));
-            Assert.DoesNotContain(h.Sim.ToiletTrips, t => t.Person is not StaffMember);
-        }
-
-        var built = WithToilets(staff: false);
-        Assert.True(built.Sim.HasPublicToilets);
+        Assert.False(WithToilets(publicToilets: false, accessible: false).Sim.HasPublicToilets);
+        Assert.True(WithToilets(staff: false).Sim.HasPublicToilets);
     }
 
     [Fact]

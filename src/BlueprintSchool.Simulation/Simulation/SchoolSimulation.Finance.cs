@@ -1,23 +1,13 @@
-using BlueprintSchool.Simulation.Medical;
-using BlueprintSchool.Simulation.Patients;
-
 namespace BlueprintSchool.Simulation.Simulation;
 
 /// <summary>What money came in or went out for.</summary>
 public enum MoneyCategory
 {
-    /// <summary>Payment for each A&amp;E attendance, by how sick the patient was.</summary>
-    Attendances,
+    /// <summary>Funding for each pupil on roll (comes with the pupils).</summary>
+    Funding,
 
-    /// <summary>Payment for each patient admitted to a ward, plus each night they stay.</summary>
-    Admissions,
-
-    /// <summary>Wages for every hire on the day and night teams.</summary>
+    /// <summary>Wages for every member of staff.</summary>
     Staff,
-
-    Tests,
-
-    Medicines,
 
     /// <summary>Cleaning, heating, lighting and repairs, by floor area.</summary>
     Upkeep,
@@ -25,23 +15,11 @@ public enum MoneyCategory
     /// <summary>Building, moving and demolishing rooms and extending the building.</summary>
     Construction,
 
-    /// <summary>Payment for each operation done in theatre.</summary>
-    Operations,
-
-    /// <summary>Payment for each outpatient seen in clinic.</summary>
-    Clinics,
-
-    /// <summary>The hospital's share of what patients spend in its cafes and vending machines.</summary>
+    /// <summary>The school's share of what is spent in its canteen and vending machines.</summary>
     Catering,
 
     /// <summary>Money added from the cheat console.</summary>
     Cheats,
-
-    /// <summary>Payment for each birth (more for a caesarean section) and each day a baby spends on the neonatal unit.</summary>
-    Maternity,
-
-    /// <summary>Prescription charges paid by working-age patients collecting medicines from the pharmacy.</summary>
-    Prescriptions,
 }
 
 /// <summary>Money in and out on one day, by category. Spending is negative.</summary>
@@ -63,35 +41,13 @@ public sealed class DayAccounts
 }
 
 /// <summary>
-/// The hospital's money: payments for patients seen and admitted, and the running costs of staff,
-/// tests, medicines and the building. Payments are a simplified version of the NHS tariff.
+/// The school's money: for now just the running costs of staff and the building, and what building
+/// work costs. Funding per pupil comes with the pupils.
 /// </summary>
 public sealed partial class SchoolSimulation
 {
-    /// <summary>Payment for an A&amp;E attendance by triage category.</summary>
-    public static readonly IReadOnlyDictionary<TriageCategory, int> AttendanceTariff = new Dictionary<TriageCategory, int>
-    {
-        [TriageCategory.Red] = 450,
-        [TriageCategory.Amber] = 250,
-        [TriageCategory.Green] = 130,
-    };
-
-    /// <summary>Payment when an admitted patient goes home, plus <see cref="BedDayTariff"/> for each night on the ward.</summary>
-    public const int AdmissionTariff = 1_200;
-
-    public const int BedDayTariff = 300;
-
-    /// <summary>Payment for an operation, on top of the admission.</summary>
-    public const int OperationTariff = 2_500;
-
-    /// <summary>Without a pharmacy on site, medicines are bought in from outside at this mark-up.</summary>
-    public const double NoPharmacyMedicineMarkup = 1.5;
-
-    /// <summary>
-    /// Each hire covers one 12-hour shift (days or nights) every day of the week: about 2.25 people. So a
-    /// day hire and a night hire together cost what a round-the-clock post did before shifts.
-    /// </summary>
-    public const double StaffPerPost = 2.25;
+    /// <summary>Each hire is one post, paid every day of the year.</summary>
+    public const double StaffPerPost = 1.0;
 
     /// <summary>Upkeep per square metre of building per day.</summary>
     public const double UpkeepPerSquareMetrePerDay = 0.6;
@@ -109,7 +65,7 @@ public sealed partial class SchoolSimulation
 
     public DayAccounts Today => Day(Now.Date);
 
-    /// <summary>What the day and night teams cost a day in wages.</summary>
+    /// <summary>What the staff cost a day in wages.</summary>
     public long StaffCostPerDay => (long)Math.Round(_staff.Sum(s => s.Salary) * StaffPerPost / 365.0);
 
     public long UpkeepPerDay => (long)Math.Round(MainBuilding.AreaSquareMetres * UpkeepPerSquareMetrePerDay);
@@ -155,7 +111,7 @@ public sealed partial class SchoolSimulation
         if (Balance < 0 && !_overdrawnWarned && !UnlimitedMoney)
         {
             _overdrawnWarned = true;
-            Notifications.Add(Now, NotificationLevel.Critical, $"The hospital is overdrawn (£{Balance:N0}). Building is stopped until money comes in. Look at Finances to see where it is going.");
+            Notifications.Add(Now, NotificationLevel.Critical, $"The school is overdrawn (£{Balance:N0}). Building is stopped until money comes in. Look at Finances to see where it is going.");
         }
         else if (Balance > 0)
         {
@@ -181,24 +137,5 @@ public sealed partial class SchoolSimulation
             _unpaidUpkeep -= due;
             Book(MoneyCategory.Upkeep, -due);
         }
-    }
-
-    /// <summary>The A&amp;E attendance is paid once, when the patient leaves A&amp;E (home, ward, elsewhere or died).</summary>
-    private void PayForAttendance(Patient patient)
-    {
-        if (patient.Triage is { } category && patient.Outcome != PatientOutcome.LeftWithoutBeingSeen)
-        {
-            Book(MoneyCategory.Attendances, AttendanceTariff[category]);
-        }
-    }
-
-    /// <summary>What a dose costs: list price with a pharmacy, more without.</summary>
-    public long MedicineCost(int costPerDose) =>
-        HasPharmacy ? costPerDose : (long)Math.Round(costPerDose * NoPharmacyMedicineMarkup);
-
-    private void PayForAdmission(Patient patient)
-    {
-        var nights = patient.AdmittedAt is { } admitted ? (int)Math.Floor((Now - admitted).TotalDays) : 0;
-        Book(MoneyCategory.Admissions, AdmissionTariff + (nights * BedDayTariff) + CriticalCarePayment(patient));
     }
 }

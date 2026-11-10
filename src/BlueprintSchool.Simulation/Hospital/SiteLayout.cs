@@ -1,46 +1,10 @@
-using BlueprintSchool.Simulation.Data;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Hospital;
 
-/// <summary>
-/// The A&amp;E every new game starts with, built from the same room templates the player uses. There is no waiting
-/// room: the player builds and fits that out (see <c>SchoolSimulation.BuildStarterWaitingRoom</c> for the old one).
-/// Coordinates are relative to the building's corner; one tile is 0.5 m.
-/// </summary>
-public static class EmergencyDepartmentLayout
+/// <summary>Turns the site and its rooms into the walkability grid people find their way around.</summary>
+public static class SiteLayout
 {
-    public const string Department = "emergency";
-
-    /// <summary>One room of the starter layout: template, id, name, corner, size in tiles along the door wall and deep, and door side.</summary>
-    private sealed record Placement(string Template, string Id, string Name, int X, int Y, int Width, int Depth, WallSide Door);
-
-    private static readonly Placement[] Starter =
-    {
-        new("corridor", "corridor_main", "A&E corridor", 4, 9, 56, 8, WallSide.South),
-        new("corridor", "corridor_link", "Waiting room corridor", 22, 17, 8, 9, WallSide.South),
-        new("minors_cubicle", "minors_1", "Minors 1", 4, 0, 8, 9, WallSide.South),
-        new("minors_cubicle", "minors_2", "Minors 2", 12, 0, 8, 9, WallSide.South),
-        new("staff_room", "staff_room", "Staff room", 20, 0, 8, 9, WallSide.South),
-        new("majors_cubicle", "majors_1", "Majors 1", 28, 0, 8, 9, WallSide.South),
-        new("majors_cubicle", "majors_2", "Majors 2", 36, 0, 8, 9, WallSide.South),
-        new("resus_bay", "resus_1", "Resus", 44, 0, 12, 9, WallSide.South),
-        new("doctors_office", "doctors_office", "Doctors' office", 4, 17, 10, 9, WallSide.North),
-        new("triage_room", "triage_1", "Triage", 30, 17, 9, 8, WallSide.West),
-        new("nurses_station", "nurses_station", "Nurses' station", 38, 17, 10, 9, WallSide.North),
-    };
-
-    public static List<CareSpace> Create(Building building, GameDatabase database)
-    {
-        var o = new GridCoord(building.Footprint.X, building.Footprint.Y);
-        return Starter.Select(p =>
-        {
-            var template = database.RoomTemplates[p.Template];
-            var rect = RoomLayoutEngine.RectFor(new GridCoord(o.X + p.X, o.Y + p.Y), p.Width, p.Depth, p.Door);
-            return RoomLayoutEngine.Build(template, database, p.Id, p.Name, rect, p.Door);
-        }).ToList();
-    }
-
     /// <summary>Builds the walkability grid: paths and floors walkable, walls blocking except at doors and entrances.</summary>
     public static NavGrid BuildNavGrid(SiteMap site, IEnumerable<CareSpace> spaces)
     {
@@ -52,7 +16,6 @@ public static class EmergencyDepartmentLayout
             {
                 TileKind.BuildingFloor => 1,
                 TileKind.Paving => 1,
-                TileKind.AmbulanceBay => 1,
                 TileKind.Parking => 2,
                 TileKind.Road => 3,
                 TileKind.Grass => 4,

@@ -2,47 +2,23 @@ using BlueprintSchool.Simulation.Agents;
 
 namespace BlueprintSchool.Simulation.Staff;
 
+/// <summary>
+/// The kinds of staff a school can hire. A placeholder set for the foundation: teaching posts by subject,
+/// leadership and the rest of the support staff come with the staffing milestone.
+/// </summary>
 public enum StaffRole
 {
+    /// <summary>Teaches classes.</summary>
+    Teacher,
+
+    /// <summary>Supports pupils in lessons.</summary>
+    TeachingAssistant,
+
+    /// <summary>Runs the front office at reception.</summary>
     Receptionist,
-    Nurse,
-    Doctor,
-    Radiographer,
-    Surgeon,
-    Pharmacist,
 
-    /// <summary>Moves patients who can't walk: wheelchairs and trolleys.</summary>
-    Porter,
-
-    /// <summary>Does echocardiograms and runs the cath lab.</summary>
-    CardiacPhysiologist,
-
-    /// <summary>Records EEGs.</summary>
-    Neurophysiologist,
-
-    /// <summary>Does ultrasound scans in the early pregnancy unit.</summary>
-    Sonographer,
-
-    /// <summary>Does endoscopies (OGD).</summary>
-    Endoscopist,
-
-    /// <summary>Puts on plaster casts in the plaster room.</summary>
-    PlasterTechnician,
-
-    /// <summary>Gets ward patients moving after a broken hip or a stroke, so they go home sooner.</summary>
-    Physiotherapist,
-
-    /// <summary>Gives the anaesthetic for every operation, and runs the intensive care unit.</summary>
-    Anaesthetist,
-
-    /// <summary>Critical care outreach: reviews ward patients who are getting worse and moves them up to HDU or ICU.</summary>
-    OutreachNurse,
-
-    /// <summary>Healthcare assistant: sits one-to-one with a patient whose monitor is red, and does their obs.</summary>
-    HealthcareAssistant,
-
-    /// <summary>Delivers babies in the delivery room, looks after mothers and babies on the maternity wards and runs antenatal clinics.</summary>
-    Midwife,
+    /// <summary>Site team: looks after the building and grounds.</summary>
+    SiteStaff,
 }
 
 public enum StaffActivity
@@ -125,35 +101,10 @@ public sealed class StaffMember : Agent
 
     public StaffActivity Activity { get; set; } = StaffActivity.Idle;
 
-    /// <summary>Set while a tannoy call for this member is playing; they set off when it ends. Not saved.</summary>
-    public DateTime? PagedUntil { get; set; }
-
-    public int? CurrentTaskId { get; set; }
-
-    /// <summary>An anaesthetist giving the anaesthetic for this operation (the surgeon's task) is held in theatre until it is done.</summary>
-    public int? AssistingTaskId { get; set; }
-
-    /// <summary>The red-monitor patient this member of staff (usually a healthcare assistant) is sitting with until they are no longer red.</summary>
-    public int? BedsidePatientId { get; set; }
-
-    /// <summary>Game seconds of work left on the current task.</summary>
-    /// <summary>Answering a crash call: the patient in cardiac arrest they are running to (or resuscitating).</summary>
-    public int? CrashPatientId { get; set; }
-
-    public double WorkRemainingSeconds { get; set; }
-
     public DateTime? BreakEndsAt { get; set; }
 
     /// <summary>Plain-English description of what they're doing, for the UI.</summary>
     public string StatusText { get; set; } = "Available";
-
-    /// <summary>Patients this doctor is currently responsible for.</summary>
-    public HashSet<int> Caseload { get; } = new();
-
-    public int TasksCompleted { get; set; }
-
-    /// <summary>The patient whose wheelchair or trolley this member of staff is pushing, if any.</summary>
-    public int? PushingPatientId { get; set; }
 
     /// <summary>The team they are on: days (08:00 to 20:00) or nights (20:00 to 08:00).</summary>
     public StaffShift Shift { get; set; } = StaffShift.Day;
@@ -164,7 +115,7 @@ public sealed class StaffMember : Agent
     /// <summary>True when the player has moved them and they will change place once their current task is done.</summary>
     public bool HasPendingMove { get; set; }
 
-    /// <summary>Where they are moving to when <see cref="HasPendingMove"/> (null for A&amp;E or the whole hospital).</summary>
+    /// <summary>Where they are moving to when <see cref="HasPendingMove"/> (null for the whole school).</summary>
     public string? PendingRoomId { get; set; }
 
     /// <summary>At work: in the building on their shift (working, free or on a break).</summary>

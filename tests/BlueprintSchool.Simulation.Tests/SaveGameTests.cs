@@ -12,7 +12,7 @@ public class SaveGameTests
         clock.SetSpeed(SimulationSpeed.Fast);
         var save = new SaveGame
         {
-            HospitalName = "St Elsewhere",
+            SchoolName = "St Elsewhere Academy",
             SavedAtUtc = new DateTime(2026, 11, 8, 12, 0, 0, DateTimeKind.Utc),
             Clock = clock.CaptureState(),
             Camera = new CameraState(120.5, -40, 1.5),
@@ -20,7 +20,7 @@ public class SaveGameTests
 
         var loaded = SaveSerializer.Deserialize(SaveSerializer.Serialize(save));
 
-        Assert.Equal("St Elsewhere", loaded.HospitalName);
+        Assert.Equal("St Elsewhere Academy", loaded.SchoolName);
         Assert.Equal(save.Clock, loaded.Clock);
         Assert.Equal(save.Camera, loaded.Camera);
     }
@@ -53,14 +53,14 @@ public class FullSaveTests
 {
     private static readonly World.GridRect B = World.StarterSite.MainBuildingFootprint;
 
-    private static SimulationHarness BusyHospitalWithWard(int seed)
+    private static SimulationHarness BusySchool(int seed)
     {
-        var h = new SimulationHarness(seed: seed, arrivals: true, start: new DateTime(2027, 1, 4, 6, 0, 0), arrivalMultiplier: 1.5);
-        Assert.True(h.Sim.ExtendBuilding(new World.GridRect(B.X - 30, B.Y, 30, 34)).CanBuild);
-        Assert.True(h.Sim.BuildRoom(new Simulation.RoomPlan("corridor", new World.GridRect(B.X - 30, B.Y + 9, 34, 8), World.WallSide.South)).CanBuild);
-        Assert.True(h.Sim.BuildRoom(h.Sim.AutoPlan("medical_ward", new World.GridRect(B.X - 30, B.Y + 17, 26, 15))).CanBuild);
+        var h = new SimulationHarness(seed: seed, start: new DateTime(2027, 1, 4, 6, 0, 0), waitingRoom: true);
+        Assert.True(h.Sim.BuildRoom(h.Sim.AutoPlan("staff_room", new World.GridRect(B.X + 4, B.Y, 12, 9))).CanBuild);
         h.StaffToRecommended();
-        h.RunFor(TimeSpan.FromHours(10));
+        h.Sim.HireStaff(Staff.StaffRole.Teacher, shift: Staff.StaffShift.Day);
+        h.Sim.HireStaff(Staff.StaffRole.TeachingAssistant, shift: Staff.StaffShift.Day);
+        h.RunFor(TimeSpan.FromHours(6));
         return h;
     }
 
@@ -73,7 +73,7 @@ public class FullSaveTests
             People = from.Sim.CapturePeople(),
         });
         var save = SaveSerializer.Deserialize(json);
-        var to = new SimulationHarness(seed: 99, arrivals: true);
+        var to = new SimulationHarness(seed: 99);
         to.Clock.RestoreState(save.Clock);
         to.Sim.RestoreLayout(save.Layout!);
         to.Sim.RestorePeople(save.People!);
@@ -81,38 +81,27 @@ public class FullSaveTests
     }
 
     [Fact]
-    public void Patients_staff_tasks_and_money_survive_save_and_load_exactly()
+    public void Staff_rooms_and_money_survive_save_and_load_exactly()
     {
-        var h = BusyHospitalWithWard(seed: 8);
-        Assert.NotEmpty(h.Sim.Patients);
+        var h = BusySchool(seed: 8);
+        Assert.NotEmpty(h.Sim.Staff);
         var loaded = Load(h);
 
         string Snapshot(SimulationHarness x) => SaveSerializer.Serialize(new SaveGame { People = x.Sim.CapturePeople(), Layout = x.Sim.CaptureLayout() });
         Assert.Equal(Snapshot(h), Snapshot(loaded));
         Assert.Equal(h.Sim.Balance, loaded.Sim.Balance);
-        Assert.Equal(h.Sim.Stats.ArrivalsTotal, loaded.Sim.Stats.ArrivalsTotal);
-        Assert.Equal(h.Sim.Stats.FourHourPerformance, loaded.Sim.Stats.FourHourPerformance);
     }
 
     [Fact]
-    public void A_loaded_hospital_carries_on_running()
+    public void A_loaded_school_carries_on_running()
     {
-        var h = BusyHospitalWithWard(seed: 3);
+        var h = BusySchool(seed: 3);
         var loaded = Load(h);
-        var before = loaded.Sim.Patients.Select(p => p.Id).ToHashSet();
+        var balance = loaded.Sim.Balance;
 
         loaded.RunFor(TimeSpan.FromHours(6));
 
-        // The patients who were in hospital at the save have moved on, and rooms still add up.
-        Assert.Contains(loaded.Sim.DepartedPatients, p => before.Contains(p.Id));
-        foreach (var space in loaded.Sim.Spaces.Where(s => s.OccupantId.HasValue))
-        {
-            Assert.Equal(space.Id, loaded.Sim.FindPatient(space.OccupantId!.Value)?.CareSpaceId);
-        }
-
-        foreach (var bed in loaded.Sim.Wards.SelectMany(w => w.Beds).Where(b => b.OccupantId.HasValue))
-        {
-            Assert.True(loaded.Sim.FindPatient(bed.OccupantId!.Value)?.IsInDepartment);
-        }
+        Assert.True(loaded.Sim.Balance < balance, "wages and upkeep should keep being paid");
+        Assert.All(loaded.Sim.Staff, s => Assert.True(loaded.Sim.Nav.IsWalkable(s.Tile), $"{s.Name} is stuck at {s.Tile}"));
     }
 }

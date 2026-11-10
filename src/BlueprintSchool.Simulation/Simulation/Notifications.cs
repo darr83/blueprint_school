@@ -1,5 +1,4 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Medical;
 
 namespace BlueprintSchool.Simulation.Simulation;
 
@@ -10,15 +9,14 @@ public enum NotificationLevel
     Critical,
 }
 
-/// <summary>A message for the player, linked to the patient or room it is about.</summary>
+/// <summary>A message for the player, linked to the person or room it is about.</summary>
 public sealed record Notification(
     int Id,
     DateTime Time,
     NotificationLevel Level,
     string Text,
-    int? PatientId = null,
-    string? CareSpaceId = null,
-    TriageCategory? Triage = null) : IGameEvent;
+    int? PersonId = null,
+    string? CareSpaceId = null) : IGameEvent;
 
 /// <summary>Keeps the most recent notifications and publishes each one on the event bus.</summary>
 public sealed class NotificationLog(EventBus events, int capacity = 200)
@@ -44,9 +42,9 @@ public sealed class NotificationLog(EventBus events, int capacity = 200)
         _nextId = Math.Max(nextId, _items.Count == 0 ? 1 : _items.Max(n => n.Id) + 1);
     }
 
-    public Notification Add(DateTime time, NotificationLevel level, string text, int? patientId = null, string? spaceId = null, TriageCategory? triage = null)
+    public Notification Add(DateTime time, NotificationLevel level, string text, int? personId = null, string? spaceId = null)
     {
-        var n = new Notification(_nextId++, time, level, text, patientId, spaceId, triage);
+        var n = new Notification(_nextId++, time, level, text, personId, spaceId);
         _items.AddFirst(n);
         while (_items.Count > capacity)
         {

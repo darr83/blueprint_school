@@ -1,6 +1,5 @@
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 
@@ -25,7 +24,7 @@ public class BuildingTests
                     var what = $"{template.Id} {size.Name} door {side}";
 
                     Assert.True(rect.Contains(room.StaffSpot), $"{what}: staff spot outside the room");
-                    Assert.True(rect.Contains(room.PatientSpot), $"{what}: patient spot outside the room");
+                    Assert.True(rect.Contains(room.PatientSpot), $"{what}: visitor spot outside the room");
                     Assert.All(room.Furniture, f => Assert.True(
                         f.X >= rect.X - 0.01 && f.Y >= rect.Y - 0.01 && f.X + f.Width <= rect.Right + 0.01 && f.Y + f.Length <= rect.Bottom + 0.01,
                         $"{what}: {f.ItemId} sticks out of the room"));
@@ -49,27 +48,27 @@ public class BuildingTests
     }
 
     [Fact]
-    public void Starter_layout_passes_the_building_rules()
+    public void A_new_school_starts_as_an_empty_building()
     {
         var h = new SimulationHarness();
-        foreach (var space in h.Sim.Spaces.ToList())
-        {
-            var check = h.Sim.CheckRoom(new RoomPlan(space.TemplateId, space.Rect, space.DoorSide), space.Id);
-            Assert.True(check.CanBuild, $"{space.Name}: {string.Join("; ", check.Problems)}");
-        }
+        Assert.Empty(h.Sim.Spaces);
+        Assert.Equal(SchoolSimulation.StartingBalance, h.Sim.Balance);
     }
 
     [Fact]
     public void Rooms_must_be_inside_the_building_and_not_overlap()
     {
         var h = new SimulationHarness();
-        var outside = h.Sim.CheckRoom(new RoomPlan("minors_cubicle", new GridRect(B.X - 12, B.Y, 8, 9), WallSide.South));
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 4, B.Y + 9, 56, 8), WallSide.South)).CanBuild);
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X + 4, B.Y, 8, 9), WallSide.South)).CanBuild);
+
+        var outside = h.Sim.CheckRoom(new RoomPlan("staff_room", new GridRect(B.X - 12, B.Y, 8, 9), WallSide.South));
         Assert.Contains(outside.Problems, p => p.Contains("inside the building"));
 
-        var overlap = h.Sim.CheckRoom(new RoomPlan("minors_cubicle", new GridRect(B.X + 6, B.Y, 8, 9), WallSide.South));
+        var overlap = h.Sim.CheckRoom(new RoomPlan("staff_room", new GridRect(B.X + 6, B.Y, 8, 9), WallSide.South));
         Assert.Contains(overlap.Problems, p => p.Contains("Overlaps"));
 
-        var tooSmall = h.Sim.CheckRoom(new RoomPlan("resus_bay", new GridRect(B.X, B.Y + 30, 4, 4), WallSide.South));
+        var tooSmall = h.Sim.CheckRoom(new RoomPlan("cafeteria", new GridRect(B.X + 20, B.Y, 4, 9), WallSide.South));
         Assert.Contains(tooSmall.Problems, p => p.Contains("Too small"));
     }
 
@@ -78,15 +77,15 @@ public class BuildingTests
     {
         var h = new SimulationHarness();
 
-        // The strip at the west end of the building is empty floor; a room there facing west opens onto the outer wall.
+        // A room at the west end of the building facing west opens onto the outer wall.
         var check = h.Sim.CheckRoom(new RoomPlan("staff_room", new GridRect(B.X, B.Y + 26, 4 * 2, 3 * 2), WallSide.West));
         Assert.Contains(check.Problems, p => p.Contains("corridor"));
     }
 
     [Fact]
-    public void Extend_the_building_then_add_a_corridor_and_a_cubicle_that_patients_use()
+    public void Extend_the_building_then_add_a_corridor_and_a_room()
     {
-        var h = new SimulationHarness();
+        var h = new SimulationHarness(mainCorridor: true);
         var start = h.Sim.Balance;
 
         var extension = h.Sim.ExtendBuilding(new GridRect(B.X - 10, B.Y, 10, 20));
@@ -95,47 +94,35 @@ public class BuildingTests
         var corridor = h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 10, B.Y + 9, 14, 8), WallSide.South));
         Assert.True(corridor.CanBuild, string.Join("; ", corridor.Problems));
 
-        var cubicle = h.Sim.BuildRoom(new RoomPlan("minors_cubicle", new GridRect(B.X - 10, B.Y, 8, 9), WallSide.South));
-        Assert.True(cubicle.CanBuild, string.Join("; ", cubicle.Problems));
-        Assert.Equal(start - extension.Cost - corridor.Cost - cubicle.Cost, h.Sim.Balance);
-        Assert.Equal(3, h.Sim.SpacesOfKind(CareSpaceKind.Minors).Count());
-
-        // Fill the original cubicles and the new one gets used.
-        var patients = Enumerable.Range(0, 4).Select(_ => h.Sim.SpawnPatient(ArrivalMethod.WalkIn, "simple_laceration")).ToList();
-        var newRoom = h.Sim.SpacesOfKind(CareSpaceKind.Minors).Single(s => s.Rect.X < B.X);
-        h.RunUntil(() => newRoom.OccupantId is not null, TimeSpan.FromHours(4), "the new cubicle to be used");
+        var room = h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X - 10, B.Y, 8, 9), WallSide.South));
+        Assert.True(room.CanBuild, string.Join("; ", room.Problems));
+        Assert.Equal(start - extension.Cost - corridor.Cost - room.Cost, h.Sim.Balance);
+        Assert.Single(h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom));
     }
 
     [Fact]
-    public void The_waiting_room_can_be_demolished_but_not_an_occupied_room()
+    public void A_room_can_be_demolished_for_a_refund_but_not_while_staff_work_there()
     {
         var h = new SimulationHarness();
-        var waiting = h.Sim.SpacesOfKind(CareSpaceKind.Waiting).Single();
-        Assert.True(h.Sim.CheckDemolish(waiting.Id).CanBuild, string.Join("; ", h.Sim.CheckDemolish(waiting.Id).Problems));
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 4, B.Y + 9, 56, 8), WallSide.South)).CanBuild);
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X + 4, B.Y, 8, 9), WallSide.South)).CanBuild);
+        var room = h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
 
-        // The last triage room can go: A&E then closes to new patients until there is another.
-        var triage = h.Sim.SpacesOfKind(CareSpaceKind.Triage).Single();
-        Assert.True(h.Sim.DemolishRoom(triage.Id).CanBuild);
-        Assert.False(h.Sim.IsEmergencyOpen);
-        Assert.Contains("a triage room", h.Sim.ClosedReasons);
-
-        var cubicle = h.Sim.Space("minors_1");
-        cubicle.OccupantId = 999;
-        Assert.False(h.Sim.CheckDemolish("minors_1").CanBuild);
-        cubicle.OccupantId = null;
+        room.ReservedByStaffId = 1;
+        Assert.False(h.Sim.CheckDemolish(room.Id).CanBuild);
+        room.ReservedByStaffId = null;
 
         var before = h.Sim.Balance;
-        var result = h.Sim.DemolishRoom("minors_1");
+        var result = h.Sim.DemolishRoom(room.Id);
         Assert.True(result.CanBuild, string.Join("; ", result.Problems));
         Assert.True(h.Sim.Balance > before);
-        Assert.Null(h.Sim.FindSpace("minors_1"));
+        Assert.Null(h.Sim.FindSpace(room.Id));
     }
 
     [Fact]
-    public void Extensions_cannot_cover_the_ambulance_bay_or_an_entrance_approach()
+    public void Extensions_cannot_cover_an_entrance_approach()
     {
         var h = new SimulationHarness();
-        Assert.False(h.Sim.CheckExtension(new GridRect(B.Right, B.Y + 6, 8, 14)).CanBuild);
         Assert.Contains(h.Sim.CheckExtension(new GridRect(B.X + 20, B.Bottom, 12, 3)).Problems, p => p.Contains("main entrance"));
         Assert.Contains(h.Sim.CheckExtension(new GridRect(B.X, B.Y - 30, 6, 6)).Problems, p => p.Contains("join on"));
     }
@@ -143,10 +130,12 @@ public class BuildingTests
     [Fact]
     public void Layout_survives_save_and_load()
     {
-        var h = new SimulationHarness();
+        var h = new SimulationHarness(mainCorridor: true);
         Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 10, B.Y, 10, 20)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 10, B.Y + 9, 14, 8), WallSide.South)).CanBuild);
-        h.Sim.RenameRoom("resus_1", "Resus A");
+        Assert.True(h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X - 10, B.Y, 8, 9), WallSide.South)).CanBuild);
+        var room = h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
+        h.Sim.RenameRoom(room.Id, "Staffroom A");
 
         var json = SaveSerializer.Serialize(new SaveGame { Layout = h.Sim.CaptureLayout() });
         var loaded = SaveSerializer.Deserialize(json);
@@ -155,25 +144,8 @@ public class BuildingTests
         fresh.Sim.RestoreLayout(loaded.Layout!);
         Assert.Equal(h.Sim.Balance, fresh.Sim.Balance);
         Assert.Equal(h.Sim.Spaces.Count(), fresh.Sim.Spaces.Count());
-        Assert.Equal("Resus A", fresh.Sim.Space("resus_1").Name);
+        Assert.Equal("Staffroom A", fresh.Sim.Space(room.Id).Name);
         Assert.True(fresh.Sim.MainBuilding.Contains(new GridCoord(B.X - 5, B.Y + 5)));
-    }
-
-    [Fact]
-    public void A_second_triage_room_lets_two_nurses_triage_at_once()
-    {
-        var h = new SimulationHarness();
-        Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 10, B.Y, 10, 20)).CanBuild);
-        Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 10, B.Y + 9, 14, 8), WallSide.South)).CanBuild);
-        var built = h.Sim.BuildRoom(new RoomPlan("triage_room", new GridRect(B.X - 10, B.Y, 8, 9), WallSide.South));
-        Assert.True(built.CanBuild, string.Join("; ", built.Problems));
-
-        for (var i = 0; i < 4; i++)
-        {
-            h.Sim.SpawnPatient(ArrivalMethod.WalkIn, "simple_laceration");
-        }
-
-        h.RunUntil(() => h.Sim.SpacesOfKind(CareSpaceKind.Triage).All(t => t.ReservedByStaffId is not null), TimeSpan.FromHours(2), "both triage rooms in use");
     }
 }
 
@@ -183,8 +155,8 @@ public class DragToBuildTests
 
     private static SimulationHarness WithWestWing()
     {
-        var h = new SimulationHarness();
-        Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 16, B.Y, 16, 26)).CanBuild);
+        var h = new SimulationHarness(mainCorridor: true);
+        Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 16, B.Y, 16, 28)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 16, B.Y + 9, 20, 8), WallSide.South)).CanBuild);
         return h;
     }
@@ -195,7 +167,7 @@ public class DragToBuildTests
         var h = WithWestWing();
 
         // North of the new corridor: the door must face south onto it.
-        var north = h.Sim.AutoPlan("minors_cubicle", new GridRect(B.X - 16, B.Y, 8, 9));
+        var north = h.Sim.AutoPlan("staff_room", new GridRect(B.X - 16, B.Y, 8, 9));
         Assert.Equal(WallSide.South, north.DoorSide);
 
         // South of it: the door faces north.
@@ -208,9 +180,9 @@ public class DragToBuildTests
     public void Room_away_from_any_corridor_is_refused_with_a_reason()
     {
         var h = WithWestWing();
-        var check = h.Sim.CheckRoomAt("minors_cubicle", new GridRect(B.X - 16, B.Y + 18, 8, 7));
+        var check = h.Sim.CheckRoomAt("staff_room", new GridRect(B.X - 16, B.Y + 18, 8, 7));
         Assert.True(check.CanBuild || check.Problems.Any());
-        var isolated = h.Sim.CheckRoomAt("minors_cubicle", new GridRect(B.X - 15, B.Y + 19, 7, 7));
+        var isolated = h.Sim.CheckRoomAt("staff_room", new GridRect(B.X - 15, B.Y + 19, 7, 7));
         Assert.Contains(isolated.Problems, p => p.Contains("corridor"));
     }
 
@@ -218,10 +190,10 @@ public class DragToBuildTests
     public void Either_side_can_be_the_long_one()
     {
         var h = WithWestWing();
-        // 7 m along the corridor but only 3.5 m deep is too shallow for a resus bay (minimum 5 x 4 m).
-        Assert.Contains(h.Sim.CheckRoomAt("resus_bay", new GridRect(B.X - 16, B.Y + 2, 14, 7)).Problems, p => p.Contains("Too small"));
-        // 5 m along the corridor and 4.5 m deep is fine.
-        var deep = h.Sim.CheckRoomAt("resus_bay", new GridRect(B.X - 16, B.Y, 10, 9));
+        // 7 m along the corridor but only 3.5 m deep is too shallow for a canteen (minimum 5 x 5 m).
+        Assert.Contains(h.Sim.CheckRoomAt("cafeteria", new GridRect(B.X - 16, B.Y + 2, 14, 7)).Problems, p => p.Contains("Too small"));
+        // 5 m along the corridor and 5 m deep is fine.
+        var deep = h.Sim.CheckRoomAt("cafeteria", new GridRect(B.X - 16, B.Y + 17, 10, 10));
         Assert.True(deep.CanBuild, string.Join("; ", deep.Problems));
     }
 
@@ -240,9 +212,9 @@ public class DragToBuildTests
     public void Dragged_room_survives_save_and_load_with_its_door()
     {
         var h = WithWestWing();
-        var plan = h.Sim.AutoPlan("doctors_office", new GridRect(B.X - 16, B.Y + 17, 12, 8));
+        var plan = h.Sim.AutoPlan("staff_room", new GridRect(B.X - 16, B.Y + 17, 12, 8));
         Assert.True(h.Sim.BuildRoom(plan).CanBuild);
-        var built = h.Sim.Spaces.Single(s => s.TemplateId == "doctors_office" && s.Rect.X < B.X);
+        var built = h.Sim.Spaces.Single(s => s.TemplateId == "staff_room" && s.Rect.X < B.X);
 
         var fresh = new SimulationHarness();
         fresh.Sim.RestoreLayout(SaveSerializer.Deserialize(SaveSerializer.Serialize(new SaveGame { Layout = h.Sim.CaptureLayout() })).Layout!);
@@ -254,7 +226,7 @@ public class DragToBuildTests
     [Fact]
     public void Corridors_can_overlap_and_join_and_only_new_floor_is_paid_for()
     {
-        var h = new SimulationHarness();
+        var h = new SimulationHarness(mainCorridor: true);
         Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 20, B.Y, 20, 20)).CanBuild);
         var first = h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 20, B.Y + 9, 24, 5), WallSide.South));
         Assert.True(first.CanBuild, string.Join("; ", first.Problems));
@@ -271,10 +243,10 @@ public class DragToBuildTests
         // Dragging over floor that is already corridor is refused, and a room still can't overlap one.
         var again = h.Sim.CheckRoom(new RoomPlan("corridor", new GridRect(B.X - 12, B.Y + 9, 5, 5), WallSide.South));
         Assert.Contains(again.Problems, p => p.Contains("already"));
-        var room = h.Sim.CheckRoom(new RoomPlan("minors_cubicle", new GridRect(B.X - 14, B.Y + 2, 8, 9), WallSide.South));
+        var room = h.Sim.CheckRoom(new RoomPlan("staff_room", new GridRect(B.X - 14, B.Y + 2, 8, 9), WallSide.South));
         Assert.Contains(room.Problems, p => p.Contains("Overlaps"));
 
-        // People can walk from the branch to the department.
+        // People can walk from the branch into the building.
         var path = h.Sim.Nav.FindPath(new GridCoord(B.X - 10, B.Y + 3), new GridCoord(B.X + 2, B.Y + 11));
         Assert.NotEmpty(path);
     }

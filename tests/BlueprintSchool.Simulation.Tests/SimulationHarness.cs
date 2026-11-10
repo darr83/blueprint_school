@@ -1,32 +1,36 @@
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Data;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Tests;
 
-/// <summary>Builds a full hospital simulation on the real game data for integration tests.</summary>
+/// <summary>Builds a full school simulation on the real game data for integration tests.</summary>
 internal sealed class SimulationHarness
 {
     private static GameDatabase? _database;
 
-    public SimulationHarness(int seed = 1234, bool arrivals = false, DateTime? start = null, double arrivalMultiplier = 1.0, StartingHospital startWith = StartingHospital.SmallEmergency, bool waitingRoom = true)
+    public SimulationHarness(int seed = 1234, DateTime? start = null, bool waitingRoom = false, bool mainCorridor = false)
     {
         Database = _database ??= GameDatabase.Load(new FileSystemDataSource(TestData.GameDataDirectory()));
         Events = new EventBus();
         Clock = new SimulationClock(Events, start ?? new DateTime(2027, 1, 4, 10, 0, 0));
-        Sim = new SchoolSimulation(Database, Clock, Events, StarterSite.Create(), new SimulationOptions
-        {
-            Seed = seed,
-            AutomaticArrivals = arrivals,
-            ArrivalRateMultiplier = arrivalMultiplier,
-            Start = startWith,
-        });
+        Sim = new SchoolSimulation(Database, Clock, Events, StarterSite.Create(), new SimulationOptions { Seed = seed });
         Clock.Ticked += _ => Sim.Tick();
 
-        // A new game has no waiting room; most tests want A&E's usual one, fitted out with desk, doors and seats.
-        if (waitingRoom && startWith == StartingHospital.SmallEmergency)
+        // A new game is an empty building; many tests want the main corridor, which joins the side entrance.
+        if (mainCorridor)
+        {
+            var b = StarterSite.MainBuildingFootprint;
+            var corridor = Sim.BuildRoom(new RoomPlan("corridor", new GridRect(b.X + 4, b.Y + 9, 56, 8), WallSide.South));
+            if (!corridor.CanBuild)
+            {
+                throw new InvalidOperationException(string.Join("; ", corridor.Problems));
+            }
+        }
+
+        // A new game has no reception; some tests want one, fitted out with desk, doors and seats.
+        if (waitingRoom)
         {
             Sim.BuildStarterWaitingRoom();
         }
@@ -57,8 +61,7 @@ internal sealed class SimulationHarness
         {
             if (Clock.Now >= end)
             {
-                var journeys = string.Join(Environment.NewLine + Environment.NewLine, Sim.Patients.Select(Journey));
-                throw new Xunit.Sdk.XunitException($"Timed out after {limit} waiting for: {what}{Environment.NewLine}{journeys}");
+                throw new Xunit.Sdk.XunitException($"Timed out after {limit} waiting for: {what}");
             }
 
             Clock.Step();
@@ -76,6 +79,4 @@ internal sealed class SimulationHarness
             }
         }
     }
-
-    public string Journey(Patient p) => string.Join(Environment.NewLine, p.Timeline.Select(t => $"{t.Time:HH:mm:ss} {t.Text}"));
 }
