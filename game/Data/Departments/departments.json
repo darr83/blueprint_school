@@ -1,0 +1,22 @@
+[
+  {
+    "id": "school",
+    "name": "School",
+    "short_name": "SCH",
+    "description": "The school itself: reception, corridors and the staff room. Teaching departments come later.",
+    "colour": "#1E6B47",
+    "starts_unlocked": true,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "facilities",
+    "name": "Facilities",
+    "short_name": "FAC",
+    "description": "Canteens, vending machines and toilets for pupils, staff and visitors.",
+    "colour": "#E08A3C",
+    "starts_unlocked": false,
+    "is_shared_service": true,
+    "opening_cost": 0
+  }
+]

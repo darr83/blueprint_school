@@ -1,0 +1,75 @@
+{
+  "_comment": "The bottom build bar. Each icon pops up a row of rooms. A room may sit under several icons (shared rooms). Room ids that don't exist yet are skipped, an icon whose department doesn't exist is hidden, and any room template not listed here is added to the icon of its own department. The decorate icon has no items: it opens the Decorate tool. Special items: extend_building, add_floor, waiting_chairs, waiting_desk, waiting_doors.",
+  "groups": [
+    {
+      "name": "Building",
+      "icons": [
+        {
+          "id": "building",
+          "label": "Building",
+          "name": "School building",
+          "colour": "#37474F",
+          "glyph": "building",
+          "items": [
+            "extend_building",
+            "add_floor",
+            "corridor",
+            "waiting_chairs",
+            "lift",
+            "stairs"
+          ]
+        },
+        {
+          "id": "decorate",
+          "label": "Decorate",
+          "name": "Decorate rooms",
+          "colour": "#1F5FBF",
+          "glyph": "roller",
+          "items": []
+        }
+      ]
+    },
+    {
+      "name": "School",
+      "icons": [
+        {
+          "id": "school",
+          "label": "School",
+          "name": "School",
+          "department": "school",
+          "colour": "#1E6B47",
+          "glyph": "building",
+          "items": [
+            "waiting_room",
+            "waiting_desk",
+            "waiting_doors",
+            "waiting_chairs",
+            "staff_room"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Shared services",
+      "icons": [
+        {
+          "id": "facilities",
+          "label": "Facilities",
+          "name": "Facilities",
+          "department": "facilities",
+          "colour": "#FFCA28",
+          "glyph": "facilities",
+          "catch_all": true,
+          "items": [
+            "cafeteria",
+            "vending_point",
+            "public_toilets",
+            "accessible_toilet",
+            "staff_toilet",
+            "staff_room"
+          ]
+        }
+      ]
+    }
+  ]
+}
