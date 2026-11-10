@@ -1,8 +1,8 @@
 using System;
 using System.Linq;
-using BlueprintSchool.Hospital;
+using BlueprintSchool.School;
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
@@ -36,6 +36,9 @@ public partial class SmokeTest : Node
     private int _savedStaff;
     private int _savedChairs;
     private int _savedFloors;
+    private int _teachingFloor;
+
+    private CanvasLayer? _figureSheet;
 
     private enum Stage
     {
@@ -61,6 +64,8 @@ public partial class SmokeTest : Node
         Canteen,
         Toilets,
         UpperFloor,
+        Teaching,
+        Figures,
         Rotate,
         Finances,
         WaitForLoad,
@@ -139,7 +144,7 @@ public partial class SmokeTest : Node
                 Next(Stage.WaitForSchool);
                 break;
 
-            case Stage.WaitForSchool when scene is HospitalScene school && school.IsNodeReady() && _frame >= 15:
+            case Stage.WaitForSchool when scene is SchoolScene school && school.IsNodeReady() && _frame >= 15:
             {
                 Screenshot("01c_empty_building");
                 var sim = school.Session.Simulation;
@@ -157,7 +162,7 @@ public partial class SmokeTest : Node
                 break;
             }
 
-            case Stage.RunSimulation when scene is HospitalScene school && _frame >= 30:
+            case Stage.RunSimulation when scene is SchoolScene school && _frame >= 30:
                 Screenshot("02_school");
                 Check(school.Session.Clock.TickCount > 0, "Simulation clock did not advance.");
                 Check(school.Hud.Feed.GetGlobalRect().End.Y <= MainHUD.TopBarHeight, "The notifications box is not in the top bar.");
@@ -165,7 +170,7 @@ public partial class SmokeTest : Node
                 Next(Stage.Notifications);
                 break;
 
-            case Stage.Notifications when scene is HospitalScene school && _frame >= 5:
+            case Stage.Notifications when scene is SchoolScene school && _frame >= 5:
                 Screenshot("02b_notifications");
                 Check(school.Hud.Feed.Dropdown.Visible, "Hovering the notifications box did not show the recent events.");
                 Check(school.Hud.Feed.RowsShown == Math.Min(NotificationFeed.Shown, school.Session.Simulation.Notifications.Count), $"The notifications list shows {school.Hud.Feed.RowsShown} events, not up to {NotificationFeed.Shown}.");
@@ -175,14 +180,14 @@ public partial class SmokeTest : Node
                 Next(Stage.Reception);
                 break;
 
-            case Stage.Reception when scene is HospitalScene school && _frame >= 5:
+            case Stage.Reception when scene is SchoolScene school && _frame >= 5:
                 Screenshot("03a_reception");
                 school.RotateView(1);
                 LookAtReception(school);
                 Next(Stage.ReceptionTurned);
                 break;
 
-            case Stage.ReceptionTurned when scene is HospitalScene school && _frame >= 5:
+            case Stage.ReceptionTurned when scene is SchoolScene school && _frame >= 5:
             {
                 Screenshot("03b_reception_turned");
                 school.RotateView(-1);
@@ -195,7 +200,7 @@ public partial class SmokeTest : Node
                 break;
             }
 
-            case Stage.StaffPanel when scene is HospitalScene school && _frame >= 20:
+            case Stage.StaffPanel when scene is SchoolScene school && _frame >= 20:
                 Screenshot("04_staff_panel");
                 school.ClearSelectionForTest();
                 Check(!school.Hud.StaffInfo.Visible, "Staff panel did not close.");
@@ -203,7 +208,7 @@ public partial class SmokeTest : Node
                 Next(Stage.BuildPreview);
                 break;
 
-            case Stage.BuildPreview when scene is HospitalScene school && _frame >= 5:
+            case Stage.BuildPreview when scene is SchoolScene school && _frame >= 5:
             {
                 Screenshot("05_build_preview");
                 var sim = school.Session.Simulation;
@@ -218,13 +223,13 @@ public partial class SmokeTest : Node
                 break;
             }
 
-            case Stage.RoomPanel when scene is HospitalScene school && _frame >= 5:
+            case Stage.RoomPanel when scene is SchoolScene school && _frame >= 5:
                 Screenshot("06_room_panel");
                 ClickBuildItem(school);
                 Next(Stage.BuildItem);
                 break;
 
-            case Stage.BuildItem when scene is HospitalScene school && _frame >= 5:
+            case Stage.BuildItem when scene is SchoolScene school && _frame >= 5:
                 Screenshot("06a_build_item");
                 school.Hud.HideRightPanels();
                 school.SetMode(GameMode.Build);
@@ -233,25 +238,25 @@ public partial class SmokeTest : Node
                 Next(Stage.BuildPopup);
                 break;
 
-            case Stage.BuildPopup when scene is HospitalScene school && _frame == 5:
+            case Stage.BuildPopup when scene is SchoolScene school && _frame == 5:
                 CheckBuildPopup(school);
                 school.Hud.Build.ShowHover("staff_room");
                 break;
 
-            case Stage.BuildPopup when scene is HospitalScene school && _frame >= 8:
+            case Stage.BuildPopup when scene is SchoolScene school && _frame >= 8:
                 Screenshot("06b_build_popup");
                 school.Hud.Build.ClosePopup();
                 StartDecorating(school);
                 Next(Stage.Decorate);
                 break;
 
-            case Stage.Decorate when scene is HospitalScene school && _frame >= 5:
+            case Stage.Decorate when scene is SchoolScene school && _frame >= 5:
                 Screenshot("06c_decorate");
                 FinishDecorating(school);
                 Next(Stage.Decorated);
                 break;
 
-            case Stage.Decorated when scene is HospitalScene school && _frame >= 5:
+            case Stage.Decorated when scene is SchoolScene school && _frame >= 5:
                 Screenshot("06d_decorated");
                 school.SetMode(GameMode.Play);
                 school.Hud.ToggleRecruitment();
@@ -259,7 +264,7 @@ public partial class SmokeTest : Node
                 Next(Stage.Recruitment);
                 break;
 
-            case Stage.Recruitment when scene is HospitalScene school && _frame >= 10:
+            case Stage.Recruitment when scene is SchoolScene school && _frame >= 10:
             {
                 Screenshot("07_recruitment");
                 var recruitment = school.Hud.Recruitment;
@@ -275,13 +280,13 @@ public partial class SmokeTest : Node
                 break;
             }
 
-            case Stage.Rota when scene is HospitalScene school && _frame >= 10:
+            case Stage.Rota when scene is SchoolScene school && _frame >= 10:
                 Screenshot("07b_rota");
                 school.Hud.Rota.ShowBreaksForTest();
                 Next(Stage.RotaBreaks);
                 break;
 
-            case Stage.RotaBreaks when scene is HospitalScene school && _frame >= 10:
+            case Stage.RotaBreaks when scene is SchoolScene school && _frame >= 10:
                 Screenshot("07c_rota_breaks");
                 school.Hud.ToggleRota();
                 Check(!school.Hud.Rota.Visible, "The rota did not close.");
@@ -291,7 +296,7 @@ public partial class SmokeTest : Node
                 Next(Stage.Stats);
                 break;
 
-            case Stage.Stats when scene is HospitalScene school && _frame >= 10:
+            case Stage.Stats when scene is SchoolScene school && _frame >= 10:
             {
                 Screenshot("07d_stats");
                 var stats = school.Hud.StatsScreen;
@@ -305,7 +310,7 @@ public partial class SmokeTest : Node
                 break;
             }
 
-            case Stage.StatsWeek when scene is HospitalScene school && _frame >= 10:
+            case Stage.StatsWeek when scene is SchoolScene school && _frame >= 10:
                 Screenshot("07e_stats_week");
                 school.Hud.ToggleStats();
                 Check(!school.Hud.StatsScreen.Visible, "The Stats screen did not close.");
@@ -313,27 +318,52 @@ public partial class SmokeTest : Node
                 Next(Stage.Canteen);
                 break;
 
-            case Stage.Canteen when scene is HospitalScene school && _frame >= 6:
+            case Stage.Canteen when scene is SchoolScene school && _frame >= 6:
                 Screenshot("08_canteen");
                 BuildToilets(school);
                 Next(Stage.Toilets);
                 break;
 
-            case Stage.Toilets when scene is HospitalScene school && _frame >= 6:
+            case Stage.Toilets when scene is SchoolScene school && _frame >= 6:
                 Screenshot("08b_toilets");
                 BuildUpperFloor(school);
                 Next(Stage.UpperFloor);
                 break;
 
-            case Stage.UpperFloor when scene is HospitalScene school && _frame >= 6:
+            case Stage.UpperFloor when scene is SchoolScene school && _frame >= 6:
                 Screenshot("09_first_floor");
+                BuildTeachingFloors(school);
+                _teachingFloor = 1;
+                ShowTeachingFloor(school, _teachingFloor);
+                Next(Stage.Teaching);
+                break;
+
+            case Stage.Teaching when scene is SchoolScene school && _frame >= 6:
+                Screenshot($"09_teaching_floor_{_teachingFloor}");
+                if (++_teachingFloor < school.Session.Simulation.FloorCount)
+                {
+                    ShowTeachingFloor(school, _teachingFloor);
+                    _frame = 0;
+                    break;
+                }
+
                 school.ShowFloor(0);
                 Check(IsoDraw.ViewFloor == 0, "Did not go back to the ground floor.");
+                _figureSheet = new CanvasLayer { Layer = 100 };
+                _figureSheet.AddChild(new FigureSheet { AnchorRight = 1, AnchorBottom = 1 });
+                AddChild(_figureSheet);
+                Next(Stage.Figures);
+                break;
+
+            case Stage.Figures when scene is SchoolScene school && _frame >= 4:
+                Screenshot("09z_figures");
+                _figureSheet?.QueueFree();
+                _figureSheet = null;
                 school.ToggleRoutes();
                 Next(Stage.Rotate);
                 break;
 
-            case Stage.Rotate when scene is HospitalScene school && _frame >= 6:
+            case Stage.Rotate when scene is SchoolScene school && _frame >= 6:
                 Screenshot($"10_view_{IsoDraw.Rotation}");
                 school.RotateView(1);
                 _frame = 0;
@@ -351,7 +381,7 @@ public partial class SmokeTest : Node
                 Next(Stage.Finances);
                 break;
 
-            case Stage.Finances when scene is HospitalScene school && _frame >= 10:
+            case Stage.Finances when scene is SchoolScene school && _frame >= 10:
             {
                 Screenshot("11_finances");
                 PressCtrlC(school);
@@ -375,7 +405,7 @@ public partial class SmokeTest : Node
                 break;
             }
 
-            case Stage.WaitForLoad when scene is HospitalScene school && school.IsNodeReady() && school.Session.Clock.Now == _savedTime:
+            case Stage.WaitForLoad when scene is SchoolScene school && school.IsNodeReady() && school.Session.Clock.Now == _savedTime:
             {
                 var sim = school.Session.Simulation;
                 Check(school.Session.SchoolName == SchoolName, "School name not restored.");
@@ -400,7 +430,7 @@ public partial class SmokeTest : Node
     private static GridCoord At(int x, int y) => new(B.X + x, B.Y + y);
 
     /// <summary>Uses the build tool like a player: the check must pass, then it is confirmed.</summary>
-    private static void Do(HospitalScene school, string what)
+    private static void Do(SchoolScene school, string what)
     {
         var tool = school.BuildTool;
         Check(tool.Check is { CanBuild: true }, $"{what} refused: " + string.Join("; ", tool.Check?.Problems ?? Array.Empty<string>()));
@@ -408,7 +438,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>The main corridor from the side entrance along the building, and a short link south towards the front.</summary>
-    private static void LayCorridors(HospitalScene school)
+    private static void LayCorridors(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         var tool = school.BuildTool;
@@ -419,7 +449,7 @@ public partial class SmokeTest : Node
         tool.PreviewDrag(At(22, 17), At(29, 25));
         Do(school, "The corridor down to reception");
         tool.Cancel();
-        Check(sim.SpacesOfKind(CareSpaceKind.Corridor).Count() == 2, "The corridors were not laid.");
+        Check(sim.SpacesOfKind(RoomKind.Corridor).Count() == 2, "The corridors were not laid.");
         GD.Print($"[smoke] Corridors laid; balance £{sim.Balance:N0}.");
     }
 
@@ -427,14 +457,14 @@ public partial class SmokeTest : Node
     /// Builds reception with the build tools, like a player: drag out the room, place the desk, the
     /// entrance on the front path, a door onto the corridor, then rows of chairs.
     /// </summary>
-    private static void FitOutReception(HospitalScene school)
+    private static void FitOutReception(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         var tool = school.BuildTool;
         tool.StartRoom(sim.Database.RoomTemplates["waiting_room"]);
         tool.PreviewDrag(At(15, 26), At(36, 39));
         Do(school, "Reception");
-        var room = sim.SpacesOfKind(CareSpaceKind.Waiting).Single();
+        var room = sim.SpacesOfKind(RoomKind.Waiting).Single();
         Check(room.Doors.Count == 0 && sim.DeskOf(room) is null, "A new reception should be empty.");
 
         tool.StartDesk();
@@ -461,7 +491,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>A staff room north of the main corridor.</summary>
-    private static void BuildStaffRoom(HospitalScene school)
+    private static void BuildStaffRoom(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         var tool = school.BuildTool;
@@ -470,11 +500,11 @@ public partial class SmokeTest : Node
         Do(school, "The staff room");
         tool.Cancel();
         tool.FollowMouse = true;
-        Check(sim.SpacesOfKind(CareSpaceKind.StaffRoom).Count() == 1, "The staff room was not built.");
+        Check(sim.SpacesOfKind(RoomKind.StaffRoom).Count() == 1, "The staff room was not built.");
     }
 
     /// <summary>One of each kind of staff on the day team, and a teacher on nights.</summary>
-    private static void HireTeam(HospitalScene school)
+    private static void HireTeam(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         foreach (var role in Enum.GetValues<StaffRole>())
@@ -494,7 +524,7 @@ public partial class SmokeTest : Node
         }
 
         var receptionist = sim.Staff.First(s => s.Role == StaffRole.Receptionist);
-        var staffRoom = sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
+        var staffRoom = sim.SpacesOfKind(RoomKind.StaffRoom).Single();
         Check(sim.MainWaitingRoom!.Rect.Contains(receptionist.Tile) || receptionist.IsOnBreak, $"The receptionist is not at reception ({receptionist.Tile}, {receptionist.StatusText}).");
         Check(sim.Staff.Any(s => s.Role == StaffRole.Teacher && staffRoom.Rect.Contains(s.Tile)), "No free teacher is waiting in the staff room.");
         Check(sim.Staff.Where(s => s.Shift == StaffShift.Night).All(s => !s.IsInBuilding), "The night team should be at home in the day.");
@@ -502,7 +532,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>Centres the camera on reception.</summary>
-    private static void LookAtReception(HospitalScene school)
+    private static void LookAtReception(SchoolScene school)
     {
         var room = school.Session.Simulation.MainWaitingRoom!.Rect;
         school.Camera.SnapTo(IsoDraw.ToScreen(room.X + (room.Width / 2.0), room.Y + (room.Length / 2.0)), 0.95f);
@@ -511,7 +541,7 @@ public partial class SmokeTest : Node
     /// <summary>
     /// Every kind of staff member's panel must fit inside its dock and the screen.
     /// </summary>
-    private static void CheckStaffPanelsFit(HospitalScene school)
+    private static void CheckStaffPanelsFit(SchoolScene school)
     {
         var panel = school.Hud.StaffInfo;
         foreach (var member in school.Session.Simulation.Staff.GroupBy(m => m.Role).Select(g => g.First()))
@@ -525,7 +555,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>Extends the building west, lays a corridor and previews a second staff room in the build tool.</summary>
-    private static void StartBuilding(HospitalScene school)
+    private static void StartBuilding(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         var extension = sim.ExtendBuilding(new GridRect(B.X - 30, B.Y, 30, 34));
@@ -543,12 +573,12 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>Build mode: clicking bare floor in the new room opens it, and clicking a member of staff does nothing.</summary>
-    private static void ClickRoomFloor(HospitalScene school, CareSpace room)
+    private static void ClickRoomFloor(SchoolScene school, Room room)
     {
         Check(school.Mode == GameMode.Build, "Should still be in build mode.");
         var floor = Enumerable.Range(0, room.Rect.Width * room.Rect.Length)
             .Select(i => IsoDraw.ToScreen(room.Rect.X + (i % room.Rect.Width) + 0.5, room.Rect.Y + (i / room.Rect.Width) + 0.5))
-            .First(p => school.ItemAt(p, bedsOnly: false) is null);
+            .First(p => school.ItemAt(p) is null);
         school.ClickAt(floor);
         Check(school.Hud.RoomInfo.Visible && school.Hud.RoomInfo.RoomId == room.Id, "Clicking the room in build mode did not open it.");
 
@@ -559,7 +589,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>Build mode: clicking a piece of furniture in the new staff room opens it as an item.</summary>
-    private static void ClickBuildItem(HospitalScene school)
+    private static void ClickBuildItem(SchoolScene school)
     {
         var room = school.Session.Simulation.Spaces.Where(s => s.TemplateId == "staff_room").OrderBy(s => s.Rect.X).First();
         foreach (var item in room.Furniture)
@@ -575,7 +605,7 @@ public partial class SmokeTest : Node
         Check(false, "Clicking furniture in build mode did not open it as an item.");
     }
 
-    private void CheckBuildBar(HospitalScene school)
+    private void CheckBuildBar(SchoolScene school)
     {
         var bar = school.Hud.Build;
         Check(bar.Visible, "Build mode did not show the build bar.");
@@ -593,7 +623,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>The open pop-up sits above the bar and inside the screen.</summary>
-    private void CheckBuildPopup(HospitalScene school)
+    private void CheckBuildPopup(SchoolScene school)
     {
         var bar = school.Hud.Build;
         var screen = GetViewport().GetVisibleRect().Size;
@@ -603,12 +633,12 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>The Decorate tool: clicking the staff room opens its panel, and picks show in the world before they are paid for.</summary>
-    private static void StartDecorating(HospitalScene school)
+    private static void StartDecorating(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         school.Hud.Build.Open(Simulation.Data.BuildMenu.Decorate);
         Check(school.Hud.Build.Decorating, "The Decorate icon did not open the Decorate tool.");
-        var room = sim.Spaces.First(s => s.Kind == CareSpaceKind.StaffRoom);
+        var room = sim.Spaces.First(s => s.Kind == RoomKind.StaffRoom);
         var (cx, cy) = (room.Rect.X + (room.Rect.Width / 2.0), room.Rect.Y + (room.Rect.Length / 2.0));
         school.Camera.SnapTo(IsoDraw.ToScreen(cx, cy), 1.4f);
         school.ClickAt(IsoDraw.ToScreen(cx, cy));
@@ -621,7 +651,7 @@ public partial class SmokeTest : Node
         Check(DecorArt.Preview is { } preview && preview.RoomId == room.Id, "Picking a finish should show it in the world.");
     }
 
-    private static void FinishDecorating(HospitalScene school)
+    private static void FinishDecorating(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         var room = sim.FindSpace(school.Hud.Decorate.RoomId!)!;
@@ -634,11 +664,11 @@ public partial class SmokeTest : Node
         school.Hud.Build.ClosePopup();
     }
 
-    private static void OpenRota(HospitalScene school)
+    private static void OpenRota(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         Check(sim.Staff.Any(s => s.Shift != sim.CurrentShift && !s.IsInBuilding), "The other shift's team should be at home.");
-        var staffRoom = sim.SpacesOfKind(CareSpaceKind.StaffRoom).First();
+        var staffRoom = sim.SpacesOfKind(RoomKind.StaffRoom).First();
         var receptionist = sim.OnDutyStaff.First(s => s.Role == StaffRole.Receptionist);
         Check(!sim.MoveStaff(receptionist.Id, staffRoom.Id), "A receptionist can only work for the whole school.");
         foreach (var member in sim.OnDutyStaff.Take(3))
@@ -653,7 +683,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>Ctrl+C opens the cheat console; "money" adds to the balance under a Cheats line.</summary>
-    private static void CheckCheatConsole(HospitalScene school)
+    private static void CheckCheatConsole(SchoolScene school)
     {
         PressCtrlC(school);
         Check(school.Hud.Cheats.Visible, "Ctrl+C did not open the cheat console.");
@@ -668,7 +698,7 @@ public partial class SmokeTest : Node
         Check(sim.Balance == before + CheatMoney, "Taking money away with the cheat did not work.");
     }
 
-    private static void PressCtrlC(HospitalScene school)
+    private static void PressCtrlC(SchoolScene school)
     {
         var press = new InputEventKey { Keycode = Key.C, PhysicalKeycode = Key.C, CtrlPressed = true, Pressed = true };
         school.GetViewport().PushInput(press);
@@ -680,7 +710,7 @@ public partial class SmokeTest : Node
     /// A small wing west of the first extension, with a toilet block and an accessible toilet either side of
     /// a corridor off the canteen corridor. Leaves a wet patch on the corridor floor to check it draws.
     /// </summary>
-    private static void BuildToilets(HospitalScene school)
+    private static void BuildToilets(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         school.Hud.HideRightPanels();
@@ -700,10 +730,10 @@ public partial class SmokeTest : Node
             Check(built.CanBuild, $"{template} refused: " + string.Join("; ", built.Problems));
         }
 
-        var block = sim.SpacesOfKind(CareSpaceKind.Toilets).Single();
+        var block = sim.SpacesOfKind(RoomKind.Toilets).Single();
         Check(block.ToiletSpots.Count >= 2, $"The toilet block has only {block.ToiletSpots.Count} cubicles.");
         Check(block.SinkSpots.Count >= 1, "The toilet block has no basins.");
-        Check(sim.SpacesOfKind(CareSpaceKind.AccessibleToilet).Single().ToiletSpots.Count == 1, "The accessible toilet has no toilet.");
+        Check(sim.SpacesOfKind(RoomKind.AccessibleToilet).Single().ToiletSpots.Count == 1, "The accessible toilet has no toilet.");
         Check(sim.HasPublicToilets, "The school should have toilets now.");
         sim.SpillForTest(new GridCoord(B.X - 37, B.Y + 33));
         Check(sim.FloorAccidents.Count == 1, "The wet patch wasn't left on the floor.");
@@ -714,7 +744,7 @@ public partial class SmokeTest : Node
     }
 
     /// <summary>A canteen and a vending point in a wing south of the first extension, reached by a corridor down from it.</summary>
-    private static void BuildCanteen(HospitalScene school)
+    private static void BuildCanteen(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         sim.AdjustBalance(1_000_000);
@@ -736,9 +766,9 @@ public partial class SmokeTest : Node
             Check(built.CanBuild, $"{template} refused: " + string.Join("; ", built.Problems));
         }
 
-        var canteen = sim.SpacesOfKind(CareSpaceKind.Cafeteria).Single();
+        var canteen = sim.SpacesOfKind(RoomKind.Cafeteria).Single();
         Check(canteen.Seats.Count >= 8, $"The canteen only has {canteen.Seats.Count} chairs.");
-        Check(sim.SpacesOfKind(CareSpaceKind.VendingPoint).Single().VendingSpots.Count >= 2, "The vending point has fewer than two machines.");
+        Check(sim.SpacesOfKind(RoomKind.VendingPoint).Single().VendingSpots.Count >= 2, "The vending point has fewer than two machines.");
         GD.Print($"[smoke] Canteen: {canteen.Seats.Count} seats.");
         school.Camera.SnapTo(IsoDraw.ToScreen(canteen.Rect.X + (canteen.Rect.Width / 2.0), canteen.Rect.Y + (canteen.Rect.Length / 2.0)), 1.2f);
     }
@@ -747,7 +777,7 @@ public partial class SmokeTest : Node
     /// Adds a first floor with stairs and a lift off the main corridor, a corridor and a staff room upstairs,
     /// and runs the clock until a member of staff has walked up there.
     /// </summary>
-    private static void BuildUpperFloor(HospitalScene school)
+    private static void BuildUpperFloor(SchoolScene school)
     {
         var sim = school.Session.Simulation;
         sim.AdjustBalance(2_000_000);
@@ -781,6 +811,70 @@ public partial class SmokeTest : Node
         school.ShowFloor(1);
         Check(IsoDraw.ViewFloor == 1, "Did not show the first floor.");
         school.Camera.SnapTo(school.World.FootPosition(climber), 0.9f);
+    }
+
+    /// <summary>Every teaching room, by floor: the rooms south of each floor's corridor, then the small rooms north of it.</summary>
+    private static readonly (int Floor, string Template, GridRect Rect)[] TeachingRooms =
+    {
+        (1, "dt_workshop", new GridRect(2, 17, 18, 16)),
+        (1, "food_room", new GridRect(34, 17, 14, 16)),
+        (2, "english_classroom", new GridRect(2, 17, 17, 15)),
+        (2, "science_lab", new GridRect(19, 17, 18, 16)),
+        (2, "ict_suite", new GridRect(37, 17, 11, 16)),
+        (2, "prep_room", new GridRect(4, 0, 9, 9)),
+        (2, "hoy_office", new GridRect(14, 0, 8, 9)),
+        (2, "small_group_room", new GridRect(23, 0, 9, 9)),
+        (2, "reflection_room", new GridRect(33, 0, 11, 9)),
+        (2, "school_office", new GridRect(45, 0, 9, 9)),
+        (3, "art_room", new GridRect(2, 17, 17, 16)),
+        (3, "library", new GridRect(19, 17, 18, 16)),
+        (3, "music_room", new GridRect(37, 17, 11, 16)),
+        (3, "changing_room", new GridRect(4, 0, 10, 9)),
+        (3, "send_base", new GridRect(15, 0, 14, 9)),
+        (3, "medical_room", new GridRect(30, 0, 8, 9)),
+        (4, "sports_hall", new GridRect(2, 17, 32, 20)),
+        (4, "drama_studio", new GridRect(35, 17, 13, 16)),
+    };
+
+    /// <summary>
+    /// Adds floors up to the top, each with a corridor, and fits out every kind of teaching room the
+    /// school has, so each one is built and drawn at least once.
+    /// </summary>
+    private static void BuildTeachingFloors(SchoolScene school)
+    {
+        var sim = school.Session.Simulation;
+        sim.AdjustBalance(10_000_000);
+        while (sim.FloorCount < 5)
+        {
+            var floor = sim.AddFloor();
+            Check(floor.CanBuild, "Adding a floor refused: " + string.Join("; ", floor.Problems));
+            var corridor = sim.BuildRoom(new RoomPlan("corridor", sim.Site.OnFloor(new GridRect(B.X + 4, B.Y + 9, 56, 8), sim.FloorCount - 1), WallSide.South));
+            Check(corridor.CanBuild, $"Corridor on floor {sim.FloorCount - 1} refused: " + string.Join("; ", corridor.Problems));
+        }
+
+        foreach (var (floorIndex, template, local) in TeachingRooms)
+        {
+            var rect = sim.Site.OnFloor(new GridRect(B.X + local.X, B.Y + local.Y, local.Width, local.Length), floorIndex);
+            var built = sim.BuildRoom(sim.AutoPlan(template, rect));
+            Check(built.CanBuild, $"{template} refused: " + string.Join("; ", built.Problems));
+        }
+
+        foreach (var kind in Enum.GetValues<RoomKind>().Where(Room.IsTeaching))
+        {
+            Check(sim.SpacesOfKind(kind).Any(), $"No {kind} was built.");
+        }
+
+        var english = sim.SpacesOfKind(RoomKind.Classroom).Single(r => r.TemplateId == "english_classroom");
+        var lab = sim.SpacesOfKind(RoomKind.ScienceLab).Single();
+        Check(english.Seats.Count >= 24, $"The English classroom only seats {english.Seats.Count}.");
+        Check(lab.Seats.Count >= 24, $"The science lab only seats {lab.Seats.Count}.");
+        GD.Print($"[smoke] Teaching rooms: {sim.Spaces.Count(r => r.IsTeachingRoom)} built over {sim.FloorCount} floors; English classroom seats {english.Seats.Count}, science lab {lab.Seats.Count}.");
+    }
+
+    private static void ShowTeachingFloor(SchoolScene school, int floor)
+    {
+        school.ShowFloor(floor);
+        school.Camera.SnapTo(IsoDraw.ToScreen(B.X + 26, school.Session.Simulation.Site.OnFloor(new GridRect(B.X, B.Y + 18, 1, 1), floor).Y), 0.75f);
     }
 
     /// <summary>Saves the current frame when run with "--screenshots=DIR" (needs a real display, not --headless).</summary>

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using BlueprintSchool.Hospital;
+using BlueprintSchool.School;
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 using Godot;
@@ -34,7 +34,7 @@ public partial class DecoratePanel : PanelContainer
     private readonly List<(string? Hex, Swatch Button)> _floorDots = new();
     private readonly List<(string? Hex, Swatch Button)> _wallDots = new();
     private SchoolSimulation _sim = null!;
-    private CareSpace? _room;
+    private Room? _room;
     private RoomDecor _draft = RoomDecor.Standard;
 
     /// <summary>The room being decorated, or null when closed.</summary>
@@ -58,7 +58,7 @@ public partial class DecoratePanel : PanelContainer
 
         var header = new HBoxContainer();
         var dot = new Panel { CustomMinimumSize = new Vector2(12, 12), SizeFlagsVertical = SizeFlags.ShrinkCenter };
-        dot.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Blue, 3));
+        dot.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Primary, 3));
         header.AddChild(dot);
         var names = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         names.AddThemeConstantOverride("separation", 0);
@@ -144,7 +144,7 @@ public partial class DecoratePanel : PanelContainer
     }
 
     /// <summary>Opens the panel on a room, starting from the finish it has now.</summary>
-    public void Show(CareSpace room)
+    public void Show(Room room)
     {
         _room = room;
         _draft = _sim.DecorOf(room);
@@ -330,7 +330,7 @@ public partial class DecoratePanel : PanelContainer
         {
             var size = Size;
             var hovered = GetGlobalRect().HasPoint(GetGlobalMousePosition());
-            var ring = Selected ? UiStyle.Blue : hovered ? new Color("#9DB6DA") : UiStyle.Border;
+            var ring = Selected ? UiStyle.Primary : hovered ? new Color("#9DB6DA") : UiStyle.Border;
             var room = _panel._room;
             if (Dot is { } colour)
             {
@@ -348,9 +348,9 @@ public partial class DecoratePanel : PanelContainer
 
             if (Usual)
             {
-                DrawStyleBox(UiStyle.Box(Selected ? UiStyle.BlueTint : UiStyle.Surface, 13, ring), new Rect2(Vector2.Zero, size));
+                DrawStyleBox(UiStyle.Box(Selected ? UiStyle.PrimaryTint : UiStyle.Surface, 13, ring), new Rect2(Vector2.Zero, size));
                 var font = GetThemeFont("font", "Label");
-                DrawString(font, new Vector2(0, (size.Y / 2) + 5), "Usual", HorizontalAlignment.Center, size.X, 13, Selected ? UiStyle.Blue : UiStyle.TextDark);
+                DrawString(font, new Vector2(0, (size.Y / 2) + 5), "Usual", HorizontalAlignment.Center, size.X, 13, Selected ? UiStyle.Primary : UiStyle.TextDark);
                 return;
             }
 
@@ -378,7 +378,7 @@ public partial class DecoratePanel : PanelContainer
                 var a = new Vector2(0, size.Y);
                 var b = new Vector2(size.X, size.Y);
                 DecorArt.DrawWallFace(this, a, b, size.Y, 0, walls, DecorArt.WallColour(look), DecorArt.WallAccent(room, look), new Color("#9FB0BE"), 0.6f);
-                var label = walls switch { Simulation.Hospital.WallFinish.Tiles => "Tiles", Simulation.Hospital.WallFinish.WoodPanel => "Wood", _ => DecorCatalogue.Name(walls) };
+                var label = walls switch { Simulation.Rooms.WallFinish.Tiles => "Tiles", Simulation.Rooms.WallFinish.WoodPanel => "Wood", _ => DecorCatalogue.Name(walls) };
                 DrawRect(new Rect2(0, size.Y - 16, size.X, 16), new Color(1, 1, 1, 0.88f));
                 DrawString(GetThemeFont("font", "Label"), new Vector2(0, size.Y - 4), label, HorizontalAlignment.Center, size.X, 10, UiStyle.TextDark);
             }

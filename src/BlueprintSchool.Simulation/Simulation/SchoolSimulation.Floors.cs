@@ -1,6 +1,6 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Data.Models;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Simulation;
@@ -24,15 +24,15 @@ public sealed partial class SchoolSimulation
     /// <summary>Which floor a tile is on (0 = ground).</summary>
     public int FloorOf(GridCoord tile) => Site.FloorOf(tile);
 
-    public int FloorOf(CareSpace space) => Site.FloorOf(space.Rect);
+    public int FloorOf(Room space) => Site.FloorOf(space.Rect);
 
     public int FloorOf(Agent agent) => Site.FloorOf(agent.Y);
 
     /// <summary>Every lift and staircase, each as its rooms from the lowest floor up.</summary>
-    public IEnumerable<IReadOnlyList<CareSpace>> Shafts => VerticalTransport.Shafts(Site, _spaces.Values);
+    public IEnumerable<IReadOnlyList<Room>> Shafts => VerticalTransport.Shafts(Site, _spaces.Values);
 
     /// <summary>All the rooms of the lift or staircase <paramref name="space"/> belongs to (just the room itself otherwise).</summary>
-    public IReadOnlyList<CareSpace> ShaftOf(CareSpace space) =>
+    public IReadOnlyList<Room> ShaftOf(Room space) =>
         space.IsShaft
             ? _spaces.Values.Where(s => s.TemplateId == space.TemplateId && Site.Local(s.Rect) == Site.Local(space.Rect)).OrderBy(FloorOf).ToList()
             : new[] { space };
@@ -96,7 +96,7 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>The plan for a lift or staircase room on <paramref name="floor"/>, matching <paramref name="room"/> on another floor.</summary>
-    private RoomPlan ShaftPlan(CareSpace room, Doorway? door, int floor)
+    private RoomPlan ShaftPlan(Room room, Doorway? door, int floor)
     {
         var rect = Site.OnFloor(Site.Local(room.Rect), floor);
         if (door is null)

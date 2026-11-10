@@ -23,6 +23,7 @@ public partial class MainHUD : CanvasLayer
 
     private readonly Label _dateLabel = UiStyle.Caption(string.Empty, 12);
     private readonly Label _timeLabel = new();
+    private readonly BellTimeline _bells = new() { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
     private readonly Label _hoverLabel = new();
     private readonly Label _tagLabel = new();
     private readonly PanelContainer _tag = new() { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
@@ -109,24 +110,24 @@ public partial class MainHUD : CanvasLayer
     public CheatConsole Cheats { get; } = new() { Name = "CheatConsole", Visible = false };
 
     /// <summary>Raised when the player picks Play or Build in the top bar, or presses the Build button.</summary>
-    public event Action<BlueprintSchool.Hospital.GameMode>? ModeRequested;
+    public event Action<BlueprintSchool.School.GameMode>? ModeRequested;
 
     /// <summary>The mode the scene is in, shown on the Play / Build switch.</summary>
-    public BlueprintSchool.Hospital.GameMode Mode
+    public BlueprintSchool.School.GameMode Mode
     {
         get => _mode;
         set
         {
             _mode = value;
-            Build.Visible = value == BlueprintSchool.Hospital.GameMode.Build;
-            if (value != BlueprintSchool.Hospital.GameMode.Build && Decorate.Visible)
+            Build.Visible = value == BlueprintSchool.School.GameMode.Build;
+            if (value != BlueprintSchool.School.GameMode.Build && Decorate.Visible)
             {
                 Decorate.Close();
             }
         }
     }
 
-    private BlueprintSchool.Hospital.GameMode _mode;
+    private BlueprintSchool.School.GameMode _mode;
 
     private PanelContainer? _hoverPanel;
 
@@ -168,14 +169,14 @@ public partial class MainHUD : CanvasLayer
     }
 
     /// <summary>Shows one room's details, closing the other right-hand panels.</summary>
-    public void ShowRoom(BlueprintSchool.Simulation.Hospital.CareSpace room)
+    public void ShowRoom(BlueprintSchool.Simulation.Rooms.Room room)
     {
         HideRightPanels();
         RoomInfo.Show(room);
     }
 
     /// <summary>Opens the Decorate panel on a room, closing the other right-hand panels.</summary>
-    public void ShowDecorate(BlueprintSchool.Simulation.Hospital.CareSpace room)
+    public void ShowDecorate(BlueprintSchool.Simulation.Rooms.Room room)
     {
         HideRightPanels();
         Decorate.Show(room);
@@ -216,7 +217,7 @@ public partial class MainHUD : CanvasLayer
         StatsScreen.Visible = show;
     }
 
-    public void Initialise(GameSession session, BlueprintSchool.Hospital.BuildTool tool)
+    public void Initialise(GameSession session, BlueprintSchool.School.BuildTool tool)
     {
         _session = session;
         Layer = 10;
@@ -340,7 +341,7 @@ public partial class MainHUD : CanvasLayer
         var where = building is null ? (floor == 0 ? Describe(site[local]) : "Open air") : floor == 0 ? building.Name : $"{building.Name}, {SiteMap.FloorName(floor).ToLowerInvariant()}";
         foreach (var space in _session.Simulation.Spaces)
         {
-            if (space.Rect.Contains(tile) && space.Kind != BlueprintSchool.Simulation.Hospital.CareSpaceKind.Corridor)
+            if (space.Rect.Contains(tile) && space.Kind != BlueprintSchool.Simulation.Rooms.RoomKind.Corridor)
             {
                 where = $"{space.Name} ({space.AreaSquareMetres:0} m²)";
             }
@@ -371,11 +372,14 @@ public partial class MainHUD : CanvasLayer
         var brand = new HBoxContainer { CustomMinimumSize = new Vector2(250, 0) };
         brand.AddThemeConstantOverride("separation", 10);
         var logo = new PanelContainer { CustomMinimumSize = new Vector2(32, 32), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
-        logo.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Blue, 8));
-        var cross = new Label { Text = "+", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        cross.AddThemeColorOverride("font_color", Colors.White);
-        cross.AddThemeFontSizeOverride("font_size", 26);
-        logo.AddChild(cross);
+        logo.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Primary, 8));
+        // The school crest: an open book in gold on bottle green.
+        logo.AddChild(new TextureRect
+        {
+            Texture = BuildIcons.Get("book", UiStyle.Gold, 22),
+            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        });
         brand.AddChild(logo);
         var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         names.AddThemeConstantOverride("separation", -2);
@@ -399,6 +403,7 @@ public partial class MainHUD : CanvasLayer
         _timeLabel.CustomMinimumSize = new Vector2(52, 0);
         _timeLabel.VerticalAlignment = VerticalAlignment.Center;
         clockRow.AddChild(_timeLabel);
+        clockRow.AddChild(_bells);
         var speeds = new PanelContainer();
         var speedsStyle = UiStyle.Box(UiStyle.Surface, 8, UiStyle.Border);
         speedsStyle.ContentMarginLeft = speedsStyle.ContentMarginRight = speedsStyle.ContentMarginTop = speedsStyle.ContentMarginBottom = 2;
@@ -436,7 +441,7 @@ public partial class MainHUD : CanvasLayer
         return bar;
     }
 
-    private readonly Dictionary<BlueprintSchool.Hospital.GameMode, Button> _modeButtons = new();
+    private readonly Dictionary<BlueprintSchool.School.GameMode, Button> _modeButtons = new();
 
     /// <summary>The Play / Build switch: what clicking on the map picks.</summary>
     private Control BuildModeSwitch()
@@ -448,12 +453,12 @@ public partial class MainHUD : CanvasLayer
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 2);
         pill.AddChild(row);
-        AddModeButton(row, "Play", BlueprintSchool.Hospital.GameMode.Play, "Play mode: click staff and rooms");
-        AddModeButton(row, "Build", BlueprintSchool.Hospital.GameMode.Build, "Build mode: build, and click rooms and items (B)");
+        AddModeButton(row, "Play", BlueprintSchool.School.GameMode.Play, "Play mode: click staff and rooms");
+        AddModeButton(row, "Build", BlueprintSchool.School.GameMode.Build, "Build mode: build, and click rooms and items (B)");
         return pill;
     }
 
-    private void AddModeButton(HBoxContainer parent, string text, BlueprintSchool.Hospital.GameMode mode, string tooltip)
+    private void AddModeButton(HBoxContainer parent, string text, BlueprintSchool.School.GameMode mode, string tooltip)
     {
         var button = new Button
         {
@@ -465,8 +470,8 @@ public partial class MainHUD : CanvasLayer
         };
         button.AddThemeStyleboxOverride("normal", UiStyle.Box(new Color(0, 0, 0, 0), 6));
         button.AddThemeStyleboxOverride("hover", UiStyle.Box(UiStyle.Surface, 6));
-        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Blue, 6));
-        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.BlueHover, 6));
+        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Primary, 6));
+        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.PrimaryHover, 6));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_focus_color" })
         {
             button.AddThemeColorOverride(state, UiStyle.TextDark);
@@ -496,8 +501,8 @@ public partial class MainHUD : CanvasLayer
         };
         button.AddThemeStyleboxOverride("normal", UiStyle.Box(new Color(0, 0, 0, 0), 6));
         button.AddThemeStyleboxOverride("hover", UiStyle.Box(UiStyle.Ground, 6));
-        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Blue, 6));
-        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.BlueHover, 6));
+        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Primary, 6));
+        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.PrimaryHover, 6));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_focus_color" })
         {
             button.AddThemeColorOverride(state, UiStyle.TextDark);
@@ -529,7 +534,7 @@ public partial class MainHUD : CanvasLayer
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", 6);
         nav.AddChild(column);
-        column.AddChild(NavButton("Build", NavIcon.Kind.Build, () => ModeRequested?.Invoke(Mode == BlueprintSchool.Hospital.GameMode.Build ? BlueprintSchool.Hospital.GameMode.Play : BlueprintSchool.Hospital.GameMode.Build), "Build mode: build rooms and corridors, and pick rooms and items (B)"));
+        column.AddChild(NavButton("Build", NavIcon.Kind.Build, () => ModeRequested?.Invoke(Mode == BlueprintSchool.School.GameMode.Build ? BlueprintSchool.School.GameMode.Play : BlueprintSchool.School.GameMode.Build), "Build mode: build rooms and corridors, and pick rooms and items (B)"));
         column.AddChild(NavButton("Staff", NavIcon.Kind.Staff, ToggleRota, "Staff rota: day and night teams, breaks and who works where (T)"));
         column.AddChild(NavButton("Hire", NavIcon.Kind.Hire, ToggleRecruitment, "Recruitment: hire and let go of staff (H)"));
         column.AddChild(NavButton("Finances", NavIcon.Kind.Finances, ToggleFinances, "Money in and out (F)"));
@@ -585,7 +590,7 @@ public partial class MainHUD : CanvasLayer
             }
         }
 
-        Set("Build", Mode == BlueprintSchool.Hospital.GameMode.Build);
+        Set("Build", Mode == BlueprintSchool.School.GameMode.Build);
         foreach (var (mode, button) in _modeButtons)
         {
             if (button.ButtonPressed != (mode == Mode))
@@ -619,7 +624,7 @@ public partial class MainHUD : CanvasLayer
         _floorUp.AddThemeFontSizeOverride("font_size", 15);
         _mapControls.AddChild(_floorUp);
         var floorCard = new PanelContainer { CustomMinimumSize = new Vector2(44, 34), MouseFilter = Control.MouseFilterEnum.Pass };
-        var floorBox = UiStyle.Box(UiStyle.Blue, 8);
+        var floorBox = UiStyle.Box(UiStyle.Primary, 8);
         floorCard.AddThemeStyleboxOverride("panel", floorBox);
         _floorLabel.AddThemeColorOverride("font_color", Colors.White);
         _floorLabel.AddThemeFontSizeOverride("font_size", 18);
@@ -661,7 +666,7 @@ public partial class MainHUD : CanvasLayer
 
     private Control BuildTag()
     {
-        var box = UiStyle.Box(UiStyle.Blue, 8);
+        var box = UiStyle.Box(UiStyle.Primary, 8);
         box.ContentMarginLeft = box.ContentMarginRight = 10;
         box.ContentMarginTop = box.ContentMarginBottom = 4;
         box.ShadowColor = new Color(0.09f, 0.14f, 0.18f, 0.25f);
@@ -747,6 +752,7 @@ public partial class MainHUD : CanvasLayer
         var now = _session.Clock.Now;
         _dateLabel.Text = now.ToString("dddd d MMMM yyyy");
         _timeLabel.Text = now.ToString("HH:mm");
+        _bells.Show(_session.Simulation.Database.Bells, now);
     }
 
     private static string Describe(TileKind kind) => kind switch

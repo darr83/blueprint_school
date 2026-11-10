@@ -3,9 +3,119 @@
     "id": "school",
     "name": "School",
     "short_name": "SCH",
-    "description": "The school itself: reception, corridors and the staff room. Teaching departments come later.",
-    "colour": "#1E6B47",
+    "description": "The school itself: reception, corridors, offices, the staff room and the medical room.",
+    "colour": "#154A33",
     "starts_unlocked": true,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "english",
+    "name": "English",
+    "short_name": "EN",
+    "description": "English language and literature.",
+    "colour": "#C98A1E",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "maths",
+    "name": "Maths",
+    "short_name": "MA",
+    "description": "Mathematics.",
+    "colour": "#2C6FB7",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "science",
+    "name": "Science",
+    "short_name": "SC",
+    "description": "Biology, chemistry and physics, taught in labs with a prep room and a lab technician.",
+    "colour": "#2E9A9A",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "humanities",
+    "name": "Humanities",
+    "short_name": "HU",
+    "description": "History, geography and religious education.",
+    "colour": "#8C5C37",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "languages",
+    "name": "Languages",
+    "short_name": "LA",
+    "description": "Modern foreign languages: French and Spanish.",
+    "colour": "#A23B86",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "computing",
+    "name": "Computing",
+    "short_name": "CO",
+    "description": "Computing and IT, taught in computer suites.",
+    "colour": "#37474F",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "arts",
+    "name": "Arts",
+    "short_name": "AR",
+    "description": "Art, music and drama.",
+    "colour": "#C0392B",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "technology",
+    "name": "Technology",
+    "short_name": "DT",
+    "description": "Design and technology, and food and nutrition.",
+    "colour": "#827717",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "pe",
+    "name": "PE",
+    "short_name": "PE",
+    "description": "Physical education, in the sports hall and on the field.",
+    "colour": "#1E6B47",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "support",
+    "name": "Learning support",
+    "short_name": "LS",
+    "description": "Help for pupils with special educational needs and disabilities (SEND), run by the SENCO with teaching assistants.",
+    "colour": "#7A4FA3",
+    "starts_unlocked": false,
+    "is_shared_service": false,
+    "opening_cost": 0
+  },
+  {
+    "id": "pastoral",
+    "name": "Pastoral",
+    "short_name": "PA",
+    "description": "Heads of Year, behaviour and wellbeing.",
+    "colour": "#8E2B3A",
+    "starts_unlocked": false,
     "is_shared_service": false,
     "opening_cost": 0
   },
@@ -13,8 +123,8 @@
     "id": "facilities",
     "name": "Facilities",
     "short_name": "FAC",
-    "description": "Canteens, vending machines and toilets for pupils, staff and visitors.",
-    "colour": "#E08A3C",
+    "description": "The canteen, vending machines and toilets.",
+    "colour": "#E3A92B",
     "starts_unlocked": false,
     "is_shared_service": true,
     "opening_cost": 0

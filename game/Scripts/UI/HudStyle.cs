@@ -28,8 +28,8 @@ public static class HudStyle
             MouseDefaultCursorShape = Control.CursorShape.PointingHand,
         };
         button.AddThemeStyleboxOverride("normal", RowBox(new Color("#F7F9FB")));
-        button.AddThemeStyleboxOverride("hover", RowBox(UiStyle.BlueTint));
-        button.AddThemeStyleboxOverride("pressed", RowBox(new Color("#D6E2F3")));
+        button.AddThemeStyleboxOverride("hover", RowBox(UiStyle.PrimaryTint));
+        button.AddThemeStyleboxOverride("pressed", RowBox(new Color("#CFE5D8")));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_focus_color" })
         {
             button.AddThemeColorOverride(state, UiStyle.TextDark);

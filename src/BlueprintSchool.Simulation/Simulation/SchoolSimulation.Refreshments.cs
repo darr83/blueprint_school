@@ -1,6 +1,6 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Simulation.Simulation;
@@ -46,7 +46,7 @@ public sealed partial class SchoolSimulation
     private readonly Dictionary<Agent, RefreshmentTrip> _trips = new();
 
     /// <summary>Cafeterias and vending points.</summary>
-    public IEnumerable<CareSpace> RefreshmentRooms => _spaces.Values.Where(s => s.IsRefreshments);
+    public IEnumerable<Room> RefreshmentRooms => _spaces.Values.Where(s => s.IsRefreshments);
 
     /// <summary>People out getting something to eat or drink right now.</summary>
     public IReadOnlyCollection<RefreshmentTrip> RefreshmentTrips => _trips.Values;

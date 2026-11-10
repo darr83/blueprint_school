@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 
 namespace BlueprintSchool.Simulation.Simulation;
@@ -44,7 +44,7 @@ public sealed partial class SchoolSimulation
     public DateTime? CandidatesDate => _candidatesDate;
 
     /// <summary>Whether someone works in the room.</summary>
-    public bool IsStaffed(CareSpace room) => _staff.Any(s => s.BaseRoomId == room.Id);
+    public bool IsStaffed(Room room) => _staff.Any(s => s.BaseRoomId == room.Id);
 
     /// <summary>Where someone in this role could be based. For now, everyone works across the whole school.</summary>
     public IReadOnlyList<StaffPosting> PostingsFor(StaffRole role) => new[] { new StaffPosting(null, "Whole school") };

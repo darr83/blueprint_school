@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using BlueprintSchool.Hospital;
+using BlueprintSchool.School;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using Godot;
@@ -230,7 +230,7 @@ public partial class StaffPanel : PanelContainer
         var energyColour = energy >= 0.5 ? UiStyle.Green : energy >= 0.25 ? new Color(UiText.AmberHex) : UiStyle.Red;
         HudWidgets.SetMeter(_energy, energy, $"{energy:P0}", energyColour);
         var mood = m.Morale >= 0.7 ? "Good" : m.Morale >= 0.4 ? "OK" : "Low";
-        HudWidgets.SetMeter(_morale, m.Morale, mood, UiStyle.Blue);
+        HudWidgets.SetMeter(_morale, m.Morale, mood, UiStyle.Primary);
 
         _tasks.Value.Text = m.Breaks.Count(b => b.Done).ToString();
         _skill.Value.Text = $"{m.Skill:P0}";

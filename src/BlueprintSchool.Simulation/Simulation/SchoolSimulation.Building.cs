@@ -1,7 +1,7 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Data.Models;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
@@ -21,7 +21,7 @@ public sealed record RoomPlan(string TemplateId, GridRect Rect, WallSide DoorSid
 /// The answer to "can I build this here?": the cost, every reason it can't be built (empty if it
 /// can) and the furnished room it would make, for the preview.
 /// </summary>
-public sealed record BuildCheck(int Cost, IReadOnlyList<string> Problems, CareSpace? Preview = null)
+public sealed record BuildCheck(int Cost, IReadOnlyList<string> Problems, Room? Preview = null)
 {
     public bool CanBuild => Problems.Count == 0;
 }
@@ -81,7 +81,7 @@ public sealed partial class SchoolSimulation
     private const int EntranceApproach = 4;
 
     /// <summary>Rooms the school cannot run without; the last one can't be demolished. (None for now.)</summary>
-    private static readonly CareSpaceKind[] RequiredKinds = Array.Empty<CareSpaceKind>();
+    private static readonly RoomKind[] RequiredKinds = Array.Empty<RoomKind>();
 
     private int _nextRoomNumber = 1;
 
@@ -91,10 +91,10 @@ public sealed partial class SchoolSimulation
     public Building MainBuilding => Site.Buildings[0];
 
     /// <summary>Lays out (but does not build) a room from a plan.</summary>
-    public CareSpace Furnish(RoomPlan plan, string? id = null, string? name = null)
+    public Room Furnish(RoomPlan plan, string? id = null, string? name = null)
     {
         var template = Database.RoomTemplates[plan.TemplateId];
-        if (template.Kind == CareSpaceKind.Waiting)
+        if (template.Kind == RoomKind.Waiting)
         {
             // Built empty: the player places the desk, doors and chairs.
             var fittings = id is not null && _fittings.TryGetValue(id, out var placed) ? placed : WaitingFittings.Empty;
@@ -119,7 +119,7 @@ public sealed partial class SchoolSimulation
 
         var replacing = replacingId is null ? null : FindSpace(replacingId);
         bool Open(GridCoord t) => _spaces.Values.Any(s => s != replacing && s.Rect.Contains(t)
-            && (s.Kind == CareSpaceKind.Corridor || (s.Kind == CareSpaceKind.Waiting && template.Kind != CareSpaceKind.Waiting)));
+            && (s.Kind == RoomKind.Corridor || (s.Kind == RoomKind.Waiting && template.Kind != RoomKind.Waiting)));
 
         // A lift or staircase has its door in the same place on every floor: choose it from the best floor.
         var floors = template.IsShaft ? Enumerable.Range(0, Site.FloorCount).Select(f => Site.OnFloor(Site.Local(rect), f)).ToList() : new List<GridRect> { rect };
@@ -212,7 +212,7 @@ public sealed partial class SchoolSimulation
         }
 
         // Corridors may overlap other corridors (they simply join up); nothing else may overlap.
-        if (_spaces.Values.Where(s => s != replacing && !(template.IsCorridor && s.Kind == CareSpaceKind.Corridor))
+        if (_spaces.Values.Where(s => s != replacing && !(template.IsCorridor && s.Kind == RoomKind.Corridor))
                 .FirstOrDefault(s => s.Rect.Intersects(plan.Rect)) is { } overlap)
         {
             problems.Add($"Overlaps {overlap.Name}.");
@@ -240,9 +240,9 @@ public sealed partial class SchoolSimulation
             CheckDoors(room, replacing, problems);
         }
 
-        if (template.Layout == RoomLayoutKind.Ward && room.Beds.Count == 0)
+        if (template.Layout == RoomLayoutKind.Teaching && room.Seats.Count == 0)
         {
-            problems.Add("No space for a bed here. Make the ward longer.");
+            problems.Add($"No space for a single desk here. Make the {template.Name.ToLowerInvariant()} bigger.");
         }
 
         if (replacing is not null)
@@ -294,14 +294,14 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>Each door must open onto a corridor or the waiting room (a waiting room's second door may open to the street).</summary>
-    internal void CheckDoors(CareSpace room, CareSpace? replacing, List<string> problems)
+    internal void CheckDoors(Room room, Room? replacing, List<string> problems)
     {
         for (var i = 0; i < room.Doors.Count; i++)
         {
             var door = room.Doors[i];
             var outside = DoorTiles(room, door).Select(t => Step(t, door.Side)).ToList();
             var ok = outside.All(o =>
-                _spaces.Values.Any(s => s != replacing && s.Kind is CareSpaceKind.Corridor or CareSpaceKind.Waiting && s.Rect.Contains(o)));
+                _spaces.Values.Any(s => s != replacing && s.Kind is RoomKind.Corridor or RoomKind.Waiting && s.Rect.Contains(o)));
             var toStreet = i > 0 && DoorTiles(room, door).All(t => MainBuilding.IsOpening(t, door.Side));
             if (!ok && !toStreet)
             {
@@ -311,7 +311,7 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>A corridor must touch another corridor or a waiting room, or take in an entrance.</summary>
-    private bool JoinsCirculation(GridRect rect, CareSpace? replacing)
+    private bool JoinsCirculation(GridRect rect, Room? replacing)
     {
         if (MainBuilding.Entrances.Any(e => rect.Contains(e.Tile)))
         {
@@ -325,7 +325,7 @@ public sealed partial class SchoolSimulation
         }
 
         var grown = new GridRect(rect.X - 1, rect.Y - 1, rect.Width + 2, rect.Length + 2);
-        return _spaces.Values.Any(s => s != replacing && s.Kind is CareSpaceKind.Corridor or CareSpaceKind.Waiting
+        return _spaces.Values.Any(s => s != replacing && s.Kind is RoomKind.Corridor or RoomKind.Waiting
                                        && s.Rect.Tiles().Any(t => grown.Contains(t) && !IsCorner(grown, t)));
     }
 
@@ -333,7 +333,7 @@ public sealed partial class SchoolSimulation
         (t.X == r.X || t.X == r.Right - 1) && (t.Y == r.Y || t.Y == r.Bottom - 1);
 
     /// <summary>Why a room can't be moved or demolished right now, if anything.</summary>
-    private IEnumerable<string> CheckRoomIsClear(CareSpace space)
+    private IEnumerable<string> CheckRoomIsClear(Room space)
     {
         if (space.ReservedByStaffId is not null)
         {
@@ -348,26 +348,26 @@ public sealed partial class SchoolSimulation
     private static bool InsideOrHeading(Agent agent, GridRect rect) =>
         rect.Contains(agent.Tile) || (agent.Destination is { } d && rect.Contains(d));
 
-    private IEnumerable<Agent> AgentsOn(GridRect rect, CareSpace? ignoringRoom) =>
+    private IEnumerable<Agent> AgentsOn(GridRect rect, Room? ignoringRoom) =>
         _staff.Cast<Agent>()
             .Where(a => rect.Contains(a.Tile) && (ignoringRoom is null || !ignoringRoom.Rect.Contains(a.Tile)));
 
     /// <summary>Everyone must still be able to walk from the street to every room.</summary>
-    private IEnumerable<string> CheckReachable(IReadOnlyCollection<CareSpace> spaces)
+    private IEnumerable<string> CheckReachable(IReadOnlyCollection<Room> spaces)
     {
         var nav = SiteLayout.BuildNavGrid(Site, spaces);
         var reached = nav.Reachable(WalkInSpawn);
 
         // A waiting room built over the main entrance is reached through the entrance doors the player puts in it.
-        foreach (var entrance in MainBuilding.Entrances.Where(e => !reached.Contains(e.Tile) && !spaces.Any(s => s.Kind == CareSpaceKind.Waiting && s.Rect.Contains(e.Tile))))
+        foreach (var entrance in MainBuilding.Entrances.Where(e => !reached.Contains(e.Tile) && !spaces.Any(s => s.Kind == RoomKind.Waiting && s.Rect.Contains(e.Tile))))
         {
             yield return $"Would block the {entrance.Name.ToLowerInvariant()}.";
         }
 
         // A waiting room with no doors yet is still being fitted out.
-        foreach (var space in spaces.Where(s => s.Kind != CareSpaceKind.Corridor && !(s.Kind == CareSpaceKind.Waiting && s.Doors.Count == 0)))
+        foreach (var space in spaces.Where(s => s.Kind != RoomKind.Corridor && !(s.Kind == RoomKind.Waiting && s.Doors.Count == 0)))
         {
-            var spots = new[] { space.StaffSpot, space.PatientSpot }.Concat(space.Seats).Concat(space.QueueTiles);
+            var spots = new[] { space.StaffSpot, space.UseSpot }.Concat(space.Seats).Concat(space.QueueTiles);
             if (spots.Any(t => !reached.Contains(t)))
             {
                 yield return $"{space.Name} could not be reached.";
@@ -384,7 +384,7 @@ public sealed partial class SchoolSimulation
     };
 
     /// <summary>The floor tiles just inside a doorway.</summary>
-    private static IEnumerable<GridCoord> DoorTiles(CareSpace room, Doorway door)
+    private static IEnumerable<GridCoord> DoorTiles(Room room, Doorway door)
     {
         var r = room.Rect;
         for (var i = door.Offset; i < door.Offset + door.Width; i++)
@@ -400,17 +400,17 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>Tiles of <paramref name="rect"/> not already covered by another corridor.</summary>
-    private int NewCorridorTiles(GridRect rect, CareSpace? except)
+    private int NewCorridorTiles(GridRect rect, Room? except)
     {
-        var others = _spaces.Values.Where(s => s != except && s.Kind == CareSpaceKind.Corridor && s.Rect.Intersects(rect)).ToList();
+        var others = _spaces.Values.Where(s => s != except && s.Kind == RoomKind.Corridor && s.Rect.Intersects(rect)).ToList();
         return rect.Tiles().Count(t => !others.Any(o => o.Rect.Contains(t)));
     }
 
     /// <summary>A corridor costs only the floor it adds: tiles already corridor are free.</summary>
-    private int CorridorCost(RoomTemplate template, GridRect rect, CareSpace? except) =>
+    private int CorridorCost(RoomTemplate template, GridRect rect, Room? except) =>
         (int)Math.Round(template.CostPerSquareMetre * NewCorridorTiles(rect, except) * Units.MetresPerTile * Units.MetresPerTile);
 
-    private static int MoveCost(CareSpace old, CareSpace moved) =>
+    private static int MoveCost(Room old, Room moved) =>
         Math.Max(0, moved.BuildCost - old.BuildCost) + (int)Math.Round(moved.BuildCost * MoveFee);
 
     /// <summary>Checks whether a room or corridor can be demolished, and what would be refunded (as a negative cost).</summary>
@@ -433,7 +433,7 @@ public sealed partial class SchoolSimulation
             problems.AddRange(CheckReachable(_spaces.Values.Where(s => !parts.Contains(s)).ToList()));
         }
 
-        var value = space.Kind == CareSpaceKind.Corridor && Database.RoomTemplates.TryGetValue(space.TemplateId, out var corridor)
+        var value = space.Kind == RoomKind.Corridor && Database.RoomTemplates.TryGetValue(space.TemplateId, out var corridor)
             ? CorridorCost(corridor, space.Rect, space)
             : parts.Sum(p => p.BuildCost);
         return new BuildCheck(-(int)Math.Round(value * DemolitionRefund), problems);
@@ -549,13 +549,12 @@ public sealed partial class SchoolSimulation
         }
 
         var old = _spaces[id];
-        if (old.Kind == CareSpaceKind.Waiting)
+        if (old.Kind == RoomKind.Waiting)
         {
             MoveFittings(old, plan.Rect);
         }
 
         var moved = Furnish(plan, id, old.Name);
-        moved.AllowedDepartments.UnionWith(old.AllowedDepartments);
         _spaces[id] = moved;
         Book(MoneyCategory.Construction, -check.Cost);
         Notifications.Add(Now, NotificationLevel.Info, $"Rebuilt {moved.Name} for £{check.Cost:N0}.");
@@ -666,7 +665,7 @@ public sealed partial class SchoolSimulation
         {
             if (member.Activity is StaffActivity.OnBreak or StaffActivity.WalkingToBreak
                 && !_toiletTrips.ContainsKey(member)
-                && !SpacesOfKind(CareSpaceKind.StaffRoom).Any(r => r.Seats.Contains(member.Destination ?? member.Tile)))
+                && !SpacesOfKind(RoomKind.StaffRoom).Any(r => r.Seats.Contains(member.Destination ?? member.Tile)))
             {
                 member.Activity = StaffActivity.Idle;
                 member.BreakEndsAt = null;
@@ -696,7 +695,7 @@ public sealed partial class SchoolSimulation
         Rooms = _spaces.Values.OrderBy(s => s.Id, StringComparer.Ordinal).Select(s =>
         {
             var (w, d) = RoomLayoutEngine.LocalSize(s.Rect, s.DoorSide);
-            if (s.Kind == CareSpaceKind.Waiting)
+            if (s.Kind == RoomKind.Waiting)
             {
                 var fitted = FittingsOf(s);
                 return new RoomState(s.Id, s.Name, s.TemplateId, s.Rect.X, s.Rect.Y, w, d, s.DoorSide) { Desk = fitted.Desk, Doors = fitted.Doors.ToList() };
@@ -726,7 +725,7 @@ public sealed partial class SchoolSimulation
         foreach (var r in state.Rooms.Where(r => Database.RoomTemplates.ContainsKey(r.Template)))
         {
             var plan = new RoomPlan(r.Template, RoomLayoutEngine.RectFor(new GridCoord(r.X, r.Y), r.Width, r.Length, r.DoorSide), r.DoorSide, r.DoorStart, r.DoorRun);
-            if (Database.RoomTemplates[r.Template].Kind == CareSpaceKind.Waiting && r.Doors is null)
+            if (Database.RoomTemplates[r.Template].Kind == RoomKind.Waiting && r.Doors is null)
             {
                 // Saved before waiting rooms were fitted out by hand: keep its desk, doors and seats.
                 var (room, chairs) = UpgradeOldWaitingRoom(plan, r.Id, r.Name);
@@ -735,7 +734,7 @@ public sealed partial class SchoolSimulation
                 continue;
             }
 
-            if (Database.RoomTemplates[r.Template].Kind == CareSpaceKind.Waiting)
+            if (Database.RoomTemplates[r.Template].Kind == RoomKind.Waiting)
             {
                 _fittings[r.Id] = new WaitingFittings(r.Desk, r.Doors!.ToList());
             }

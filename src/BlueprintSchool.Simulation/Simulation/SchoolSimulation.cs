@@ -1,6 +1,6 @@
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Data;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
@@ -23,7 +23,7 @@ public sealed class SimulationOptions
 public sealed partial class SchoolSimulation
 {
     private readonly List<StaffMember> _staff = new();
-    private readonly Dictionary<string, CareSpace> _spaces = new();
+    private readonly Dictionary<string, Room> _spaces = new();
     private readonly SimulationOptions _options;
     private int _nextStaffId = 1;
 
@@ -65,17 +65,17 @@ public sealed partial class SchoolSimulation
 
     public IReadOnlyList<StaffMember> Staff => _staff;
 
-    public IEnumerable<CareSpace> Spaces => _spaces.Values;
+    public IEnumerable<Room> Spaces => _spaces.Values;
 
     /// <summary>Where people arrive on the site and leave it: on the front path, by the road.</summary>
     public GridCoord WalkInSpawn { get; }
 
-    public CareSpace Space(string id) => _spaces[id];
+    public Room Space(string id) => _spaces[id];
 
-    public CareSpace? FindSpace(string id) => _spaces.GetValueOrDefault(id);
+    public Room? FindSpace(string id) => _spaces.GetValueOrDefault(id);
 
     /// <summary>Rooms of one kind, in a stable order.</summary>
-    public IEnumerable<CareSpace> SpacesOfKind(CareSpaceKind kind) =>
+    public IEnumerable<Room> SpacesOfKind(RoomKind kind) =>
         _spaces.Values.Where(s => s.Kind == kind).OrderBy(s => s.Id, StringComparer.Ordinal);
 
     public StaffMember? FindStaff(int id) => _staff.FirstOrDefault(s => s.Id == id);
@@ -92,6 +92,7 @@ public sealed partial class SchoolSimulation
             member.Move(dt);
         }
 
+        RingBells();
         UpdateGeneralAnnouncements();
         UpdateToilets(dt);
         UpdateStaff(dt);
@@ -147,20 +148,20 @@ public sealed partial class SchoolSimulation
 
         if (member.Role == StaffRole.Receptionist)
         {
-            return MainWaitingRoom?.StaffSpot ?? SpacesOfKind(CareSpaceKind.Waiting).FirstOrDefault()?.StaffSpot ?? WaitingPlace(_staff.IndexOf(member));
+            return MainWaitingRoom?.StaffSpot ?? SpacesOfKind(RoomKind.Waiting).FirstOrDefault()?.StaffSpot ?? WaitingPlace(_staff.IndexOf(member));
         }
 
         // Everyone else waits in the staff room (from the far seats, leaving the near ones for staff on a
         // break); without one they wait in the main corridor.
         var index = Math.Max(0, _staff.Where(s => s.Role != StaffRole.Receptionist).ToList().IndexOf(member));
-        var seats = SpacesOfKind(CareSpaceKind.StaffRoom).SelectMany(s => s.Seats).ToList();
+        var seats = SpacesOfKind(RoomKind.StaffRoom).SelectMany(s => s.Seats).ToList();
         return seats.Count > 0 ? seats[seats.Count - 1 - (index % seats.Count)] : WaitingPlace(5 + index);
     }
 
     /// <summary>Somewhere in a corridor to stand, spread out by <paramref name="index"/>.</summary>
     internal GridCoord WaitingPlace(int index)
     {
-        var corridor = SpacesOfKind(CareSpaceKind.Corridor).OrderByDescending(c => c.Rect.Area).FirstOrDefault() ?? SpacesOfKind(CareSpaceKind.Waiting).FirstOrDefault();
+        var corridor = SpacesOfKind(RoomKind.Corridor).OrderByDescending(c => c.Rect.Area).FirstOrDefault() ?? SpacesOfKind(RoomKind.Waiting).FirstOrDefault();
         if (corridor is null)
         {
             return EntranceTile;

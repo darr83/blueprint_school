@@ -7,12 +7,12 @@ public partial class NavIcon : Control
 {
     public enum Kind
     {
-        Hospital,
+        School,
         Build,
-        Patients,
+        Pupils,
         Staff,
         Hire,
-        Clinics,
+        Timetable,
         Finances,
         Stats,
         Routes,
@@ -36,18 +36,18 @@ public partial class NavIcon : Control
 
     public override void _Draw()
     {
-        var c = _owner.ButtonPressed ? UiStyle.Blue : UiStyle.TextMuted;
+        var c = _owner.ButtonPressed ? UiStyle.Primary : UiStyle.TextMuted;
         const float w = 2f;
         void L(float x1, float y1, float x2, float y2) => DrawLine(new Vector2(x1, y1), new Vector2(x2, y2), c, w, true);
         void Box(float x, float y, float bw, float bh) => DrawRect(new Rect2(x, y, bw, bh), c, false, w);
 
         switch (_kind)
         {
-            case Kind.Hospital:
+            case Kind.School:
                 DrawPolyline(new[] { new Vector2(5, 21), new Vector2(5, 8), new Vector2(12, 4), new Vector2(19, 8), new Vector2(19, 21) }, c, w, true);
                 L(3, 21, 21, 21);
-                L(9, 12, 15, 12);
-                L(12, 9, 12, 15);
+                Box(10, 15, 4, 6);
+                DrawArc(new Vector2(12, 10), 2, 0, Mathf.Tau, 16, c, w, true);
                 break;
             case Kind.Build:
                 Box(3, 3, 8, 8);
@@ -56,7 +56,7 @@ public partial class NavIcon : Control
                 L(17, 13, 17, 21);
                 L(13, 17, 21, 17);
                 break;
-            case Kind.Patients:
+            case Kind.Pupils:
                 DrawArc(new Vector2(12, 7), 4, 0, Mathf.Tau, 24, c, w, true);
                 DrawArc(new Vector2(12, 22), 8, Mathf.Pi, Mathf.Tau, 24, c, w, true);
                 break;
@@ -72,7 +72,7 @@ public partial class NavIcon : Control
                 L(19, 6, 19, 14);
                 L(15, 10, 23, 10);
                 break;
-            case Kind.Clinics:
+            case Kind.Timetable:
                 // A calendar page.
                 DrawRect(new Rect2(3, 5, 18, 16), c, false, w);
                 L(3, 10, 21, 10);

@@ -8,12 +8,10 @@ Every line is recorded once per announcer voice (f = female, m = male) into take
 loudness evened out. The tannoy speaker sound is added in the game (Announcements bus), not baked in.
 Existing takes are skipped, so re-running never spends credits twice. Needs ffmpeg.
 
-The keys match the clip names the simulation sends (SchoolSimulation.Announcements.cs):
-call_<doctor|registrar|consultant>_resus_<1-6|x>, arrest_<resus_N|majors|ae|ward template id|room>, paed_arrest, obstetric_emergency,
-trauma_<resus_N|resus_x>, amb_due_<5|10>, assess_<condition id>, gen_<name>.
+The keys match the clip names the simulation sends (SchoolSimulation.Announcements.cs): gen_<name>
+for the lines at set times of the school day, and to_office_<role> for staff called to the school office.
 """
 
-import glob
 import json
 import os
 import subprocess
@@ -25,7 +23,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(os.path.dirname(HERE))
 TAKES = os.path.join(HERE, "takes", "pa")
 OUT = os.path.join(ROOT, "game", "Audio", "Sounds", "pa")
-CONDITIONS = os.path.join(ROOT, "game", "Data", "Conditions")
 LINES_FILE = os.path.join(HERE, "pa_lines.json")
 
 # ElevenLabs premade British voices: calm, clear announcers.
@@ -34,54 +31,33 @@ VOICES = {
     "m": "onwK4e9ZLuTAKqWW03F9",  # Daniel: steady British male newsreader
 }
 MODEL = "eleven_multilingual_v2"
-BAYS = 6
 
 GENERAL = {
     "gen_fire_test": "This is a test of the fire alarm system. No action is required.",
-    "gen_visiting_over": "Visiting time is now over. Thank you for your cooperation.",
-    "gen_visiting_open": "Afternoon visiting has now started. Please use the hand gel as you enter the wards.",
-    "gen_main_entrance": "The main entrance will close at eight p.m. Please use the A and E entrance after this time.",
-    "gen_morning": "Good morning. The hospital shop and café are now open on the ground floor.",
-    "gen_quiet": "Please keep noise to a minimum. Patients on the wards are sleeping.",
-    "gen_full_capacity": "A and E is now at full capacity.",
-    "gen_porters": "Would all available porters please report to A and E.",
     "gen_no_smoking": "This is a no smoking site, including the car park and entrances.",
-    "gen_car_park": "Would the owner of the blue estate car parked in the ambulance bay please move it immediately.",
-    "gen_lost_child": "Would the parent of a little boy called Oliver please come to the A and E reception desk.",
-    "gen_hand_hygiene": "Please remember to clean your hands when entering and leaving clinical areas.",
+    "gen_morning": "Good morning everyone. Please make your way to your tutor rooms.",
+    "gen_lunch_open": "The canteen is now open for lunch. Year seven, you may go first.",
+    "gen_library_lunch": "The library is open at lunchtime for quiet reading and homework.",
+    "gen_end_of_lunch": "Lunch is nearly over. Please make your way to your next lesson.",
+    "gen_buses": "The school buses are waiting at the front. Please make your way there now.",
+    "gen_clubs": "After-school clubs are starting. Please go straight to your club room.",
+    "gen_lost_property": "Lost property is kept at the school office. Please collect anything with your name on.",
+    "gen_walk_corridors": "Please remember to walk, not run, in the corridors.",
+}
+
+# Staff called to the school office.
+TO_OFFICE = {
+    "to_office_teacher": "Would the duty teacher please come to the school office.",
+    "to_office_site": "Would a member of the site team please come to the school office.",
+    "to_office_first_aider": "Would a first aider please come to the school office.",
+    "to_office_head_of_year": "Would the Head of Year seven please come to the school office.",
 }
 
 
 def build_lines():
     lines = {}
-    for who in ("Doctor", "Registrar", "Consultant"):
-        for bay in [*range(1, BAYS + 1), None]:
-            place = f"Resus {bay}" if bay else "Resus"
-            lines[f"call_{who.lower()}_resus_{bay or 'x'}"] = f"{who} is required at {place}."
-    for bay in [*range(1, BAYS + 1), None]:
-        place, key = (f"Resus {bay}", f"resus_{bay}") if bay else ("Resus", "resus_x")
-        lines[f"arrest_{key}"] = f"Adult cardiac arrest, {place}. Adult cardiac arrest, {place}."
-        lines[f"trauma_{key}"] = f"Trauma team to {place}."
-    lines["arrest_majors"] = "Adult cardiac arrest, Majors. Adult cardiac arrest, Majors."
-    lines["arrest_ae"] = "Adult cardiac arrest, A and E. Adult cardiac arrest, A and E."
-    # Crash calls anywhere in the hospital: each kind of ward by name, a few other rooms, children and maternity.
-    with open(os.path.join(ROOT, "game", "Data", "RoomTemplates", "ward_rooms.json")) as f:
-        for ward in json.load(f):
-            spoken = ward["name"].replace("A&E", "A and E")
-            lines[f"arrest_{ward['id']}"] = f"Adult cardiac arrest, {spoken}. Adult cardiac arrest, {spoken}."
-    for key, place in [("theatre", "Theatres"), ("xray", "X-ray"), ("ct", "C T"), ("cathlab", "the cath lab"), ("endoscopy", "Endoscopy"), ("physiogym", "the physio gym")]:
-        lines[f"arrest_{key}"] = f"Adult cardiac arrest, {place}. Adult cardiac arrest, {place}."
-    lines["arrest_x"] = "Adult cardiac arrest. Adult cardiac arrest."
-    lines["paed_arrest"] = "Paediatric cardiac arrest. Paediatric cardiac arrest."
-    lines["obstetric_emergency"] = "Obstetric emergency, Maternity. Obstetric emergency, Maternity."
-    lines["amb_due_5"] = "Ambulance due in five minutes."
-    lines["amb_due_10"] = "Ambulance due in ten minutes."
-    for path in sorted(glob.glob(os.path.join(CONDITIONS, "*.json"))):
-        with open(path) as f:
-            data = json.load(f)
-        for c in data if isinstance(data, list) else next(iter(data.values())):
-            lines[f"assess_{c['id']}"] = f"Assessment: {c['crew_assessment']}."
     lines.update(GENERAL)
+    lines.update(TO_OFFICE)
     return lines
 
 

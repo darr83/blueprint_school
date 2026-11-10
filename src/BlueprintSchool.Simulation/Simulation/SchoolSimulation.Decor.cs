@@ -1,4 +1,4 @@
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 
 namespace BlueprintSchool.Simulation.Simulation;
 
@@ -12,7 +12,7 @@ public sealed partial class SchoolSimulation
     private readonly Dictionary<string, RoomDecor> _decorDefaults = new();
 
     /// <summary>A room's floor and wall finish.</summary>
-    public RoomDecor DecorOf(CareSpace space) => _decor.GetValueOrDefault(space.Id, RoomDecor.Standard);
+    public RoomDecor DecorOf(Room space) => _decor.GetValueOrDefault(space.Id, RoomDecor.Standard);
 
     /// <summary>The look a new room built from this template gets: the player's choice for that kind of room, or its usual one.</summary>
     public RoomDecor NewRoomDecor(string templateId) =>
@@ -24,7 +24,7 @@ public sealed partial class SchoolSimulation
     public bool HasDecorDefault(string templateId) => _decorDefaults.ContainsKey(templateId);
 
     /// <summary>What it costs to change a room to this finish: each part that changes is charged by the room's floor area.</summary>
-    public int DecorateCost(CareSpace space, RoomDecor decor)
+    public int DecorateCost(Room space, RoomDecor decor)
     {
         var now = DecorOf(space);
         var area = space.AreaSquareMetres;
@@ -94,7 +94,7 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>Gives a newly built room the look for its type, free with the build.</summary>
-    private void DecorateNewRoom(CareSpace room)
+    private void DecorateNewRoom(Room room)
     {
         var decor = DecorCatalogue.CanDecorate(room) ? NewRoomDecor(room.TemplateId) : RoomDecor.Standard;
         if (!room.HasWalls)

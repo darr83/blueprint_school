@@ -1,4 +1,4 @@
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 
 namespace BlueprintSchool.Simulation.Data.Models;
 
@@ -20,22 +20,22 @@ public enum RoomLayoutKind
     /// <summary>No furniture: corridors.</summary>
     None,
 
-    /// <summary>Rows of beds along the walls with a clear aisle between; more beds the bigger the ward.</summary>
-    Ward,
+    /// <summary>
+    /// Rows of pupil workstations (desks, lab benches, computers, workbenches) facing the teaching
+    /// wall at the back of the room, with the teacher's desk at the front. More rows in a bigger room.
+    /// </summary>
+    Teaching,
 
-    /// <summary>One patient bed with an obs monitor and room-specific equipment (Minors, Majors, Resus).</summary>
-    BedSpace,
+    /// <summary>An open floor kept clear for PE, drama or assemblies, with a few items along the walls.</summary>
+    Hall,
 
-    /// <summary>A table or scanner in the middle (the first furniture item drawn as a bed) with room for staff beside it: X-ray, CT, theatre.</summary>
-    Equipment,
-
-    /// <summary>A nurse's desk, a patient chair and an obs monitor.</summary>
-    Triage,
+    /// <summary>Bookshelves along the walls and tables of four in the middle.</summary>
+    Library,
 
     /// <summary>A reception desk with a queue, and rows of seats.</summary>
     Waiting,
 
-    /// <summary>Desks with chairs for staff (doctors' office, nurses' station).</summary>
+    /// <summary>Desks with chairs (offices, the prep room, the reflection room).</summary>
     Office,
 
     /// <summary>A table, chairs and a kitchenette.</summary>
@@ -57,28 +57,6 @@ public enum RoomLayoutKind
     Stairs,
 }
 
-/// <summary>What kind of unit a ward is, when it is more than a plain ward.</summary>
-public enum WardUnit
-{
-    /// <summary>An ordinary ward.</summary>
-    None,
-
-    /// <summary>An assessment unit (e.g. the surgical assessment unit): patients wait here for theatre or a ward bed instead of in A&amp;E.</summary>
-    Assessment,
-
-    /// <summary>A day surgery unit: patients come round after a small operation and go home the same day.</summary>
-    DaySurgery,
-
-    /// <summary>A high dependency unit (HDU): level 2 critical care, a nurse for every two patients.</summary>
-    HighDependency,
-
-    /// <summary>An intensive care unit (ICU): level 3 critical care, a ventilator and a nurse at every bed.</summary>
-    IntensiveCare,
-
-    /// <summary>A neonatal unit: incubators for newborn babies who need special care, a nurse for every two babies.</summary>
-    Neonatal,
-}
-
 /// <summary>
 /// A room the player can build: what it is for, the sizes it comes in, what it costs and how
 /// it is furnished. Loaded from Data/RoomTemplates.
@@ -89,12 +67,12 @@ public sealed class RoomTemplate : IDataRecord
 
     public string Name { get; init; } = string.Empty;
 
-    /// <summary>Build menu tab, e.g. "Emergency" or "Staff".</summary>
+    /// <summary>Build menu tab, e.g. "Teaching" or "Staff".</summary>
     public string Category { get; init; } = string.Empty;
 
     public string Description { get; init; } = string.Empty;
 
-    public CareSpaceKind Kind { get; init; }
+    public RoomKind Kind { get; init; }
 
     public string Department { get; init; } = string.Empty;
 
@@ -112,20 +90,11 @@ public sealed class RoomTemplate : IDataRecord
 
     public double DoorWidthM { get; init; } = 1.0;
 
-    /// <summary>For wards: a same-day (ambulatory care) unit, used only for patients who can go home the same day.</summary>
-    public bool SameDay { get; init; }
-
-    /// <summary>True if the room has a second door opposite the first (the waiting room's street entrance).</summary>
+    /// <summary>True if the room has a second door opposite the first (reception's street entrance).</summary>
     public bool DoorBothEnds { get; init; }
 
-    /// <summary>For wards: the kind of unit (assessment, day surgery, HDU or ICU). An ordinary ward if left out.</summary>
-    public WardUnit Unit { get; init; }
-
-    /// <summary>
-    /// For operating theatres kept for one department (the maternity C-section theatre): the only
-    /// departments it takes, fixed for good. Empty for an ordinary theatre, whose departments the player ticks.
-    /// </summary>
-    public IReadOnlyList<string> TheatreDepartments { get; init; } = Array.Empty<string>();
+    /// <summary>For teaching rooms: the most pupils the room is laid out for (0 for no limit).</summary>
+    public int MaxPupils { get; init; }
 
     /// <summary>Fixed cost to fit out the room, in pounds.</summary>
     public int BaseCost { get; init; }
@@ -140,10 +109,10 @@ public sealed class RoomTemplate : IDataRecord
     public IReadOnlyList<string> Furniture { get; init; } = Array.Empty<string>();
 
     /// <summary>True for corridors: open floor with no walls or furniture.</summary>
-    public bool IsCorridor => Kind == CareSpaceKind.Corridor;
+    public bool IsCorridor => Kind == RoomKind.Corridor;
 
     /// <summary>True for lifts and stairs, which are built through every floor at once.</summary>
-    public bool IsShaft => Kind is CareSpaceKind.Lift or CareSpaceKind.Stairs;
+    public bool IsShaft => Kind is RoomKind.Lift or RoomKind.Stairs;
 
     public void Validate(ValidationContext context)
     {
@@ -159,6 +128,7 @@ public sealed class RoomTemplate : IDataRecord
         context.RequireRange("base_cost", BaseCost, 0, 10_000_000);
         context.RequireRange("cost_per_square_metre", CostPerSquareMetre, 0, 100_000);
         context.RequireIds("furniture", Furniture);
+        context.RequireRange("max_pupils", MaxPupils, 0, 300);
 
         if (Sizes.Count == 0)
         {
@@ -171,17 +141,6 @@ public sealed class RoomTemplate : IDataRecord
             context.RequireText($"sizes[{i}].name", size.Name);
             context.RequireRange($"sizes[{i}].width_m", size.WidthM, MinWidthM, MaxWidthM);
             context.RequireRange($"sizes[{i}].length_m", size.LengthM, MinLengthM, MaxLengthM);
-        }
-
-        if (Unit != WardUnit.None && Kind != CareSpaceKind.Ward)
-        {
-            context.Error("unit", "only wards can be a unit.");
-        }
-
-        context.RequireIds("theatre_departments", TheatreDepartments);
-        if (TheatreDepartments.Count > 0 && Kind != CareSpaceKind.Theatre)
-        {
-            context.Error("theatre_departments", "only operating theatres can be kept for a department.");
         }
 
         if ((Layout == RoomLayoutKind.None) != IsCorridor)

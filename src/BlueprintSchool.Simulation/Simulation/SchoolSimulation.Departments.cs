@@ -1,4 +1,4 @@
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 
 namespace BlueprintSchool.Simulation.Simulation;
 

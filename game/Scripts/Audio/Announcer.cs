@@ -45,22 +45,9 @@ public partial class Announcer : Node
             return;
         }
 
-        // Emergencies jump the queue; atmosphere is dropped if anything is already waiting.
+        // Atmosphere is dropped if anything is already playing or waiting.
         if (announcement.Kind == AnnouncementKind.General && (_busy || _queue.Count > 0))
         {
-            return;
-        }
-
-        if (false && _queue.Count > 0)
-        {
-            var rest = _queue.ToArray();
-            _queue.Clear();
-            _queue.Enqueue((announcement, _time));
-            foreach (var item in rest)
-            {
-                _queue.Enqueue(item);
-            }
-
             return;
         }
 
@@ -86,6 +73,12 @@ public partial class Announcer : Node
         {
             var (item, queuedAt) = _queue.Dequeue();
             if (_time - queuedAt > StaleAfter)
+            {
+                continue;
+            }
+
+            // A line not yet recorded is skipped, and an announcement with none recorded isn't chimed at all.
+            if (!System.Linq.Enumerable.Any(item.Clips, c => SoundLibrary.Get("pa/" + c + "_f") is not null || SoundLibrary.Get("pa/" + c + "_m") is not null))
             {
                 continue;
             }

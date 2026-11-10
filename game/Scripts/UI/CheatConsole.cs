@@ -63,7 +63,7 @@ public partial class CheatConsole : PanelContainer
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 8);
         var prompt = new Label { Text = ">", VerticalAlignment = VerticalAlignment.Center };
-        prompt.AddThemeColorOverride("font_color", UiStyle.Blue);
+        prompt.AddThemeColorOverride("font_color", UiStyle.Primary);
         prompt.AddThemeFontSizeOverride("font_size", 18);
         row.AddChild(prompt);
         _input.TextSubmitted += Submit;

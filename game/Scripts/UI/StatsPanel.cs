@@ -23,7 +23,7 @@ public partial class StatsPanel : PanelContainer
     private readonly Label _caption = UiStyle.Caption(string.Empty, 13);
     private readonly Label _arrivalsTitle = HudWidgets.Section(string.Empty);
     private readonly Label _moneyTitle = HudWidgets.Section(string.Empty);
-    private readonly StatsBarChart _arrivalsChart = new(UiStyle.Blue, UiStyle.Red);
+    private readonly StatsBarChart _arrivalsChart = new(UiStyle.Primary, UiStyle.Red);
     private readonly StatsBarChart _moneyChart = new(Positive, UiStyle.Red);
     private SchoolSimulation _sim = null!;
     private StatsPeriod _period = StatsPeriod.Last24Hours;
@@ -358,7 +358,7 @@ public partial class StatsBarChart : Control
     }
 
     public StatsBarChart()
-        : this(UiStyle.Blue, UiStyle.Red)
+        : this(UiStyle.Primary, UiStyle.Red)
     {
     }
 

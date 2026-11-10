@@ -23,7 +23,7 @@
           "id": "decorate",
           "label": "Decorate",
           "name": "Decorate rooms",
-          "colour": "#1F5FBF",
+          "colour": "#2F8F6B",
           "glyph": "roller",
           "items": []
         }
@@ -37,14 +37,174 @@
           "label": "School",
           "name": "School",
           "department": "school",
-          "colour": "#1E6B47",
+          "colour": "#154A33",
           "glyph": "building",
           "items": [
             "waiting_room",
             "waiting_desk",
             "waiting_doors",
             "waiting_chairs",
-            "staff_room"
+            "staff_room",
+            "school_office",
+            "medical_room"
+          ]
+        },
+        {
+          "id": "classrooms",
+          "label": "Classrooms",
+          "name": "Classrooms",
+          "department": "school",
+          "colour": "#5A6B73",
+          "glyph": "whiteboard",
+          "items": [
+            "classroom",
+            "small_group_room",
+            "english_classroom",
+            "maths_classroom",
+            "humanities_classroom",
+            "languages_classroom"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Teaching",
+      "icons": [
+        {
+          "id": "english",
+          "label": "English",
+          "name": "English",
+          "department": "english",
+          "colour": "#C98A1E",
+          "glyph": "book",
+          "items": [
+            "english_classroom",
+            "library"
+          ]
+        },
+        {
+          "id": "maths",
+          "label": "Maths",
+          "name": "Maths",
+          "department": "maths",
+          "colour": "#2C6FB7",
+          "glyph": "maths",
+          "items": [
+            "maths_classroom",
+            "small_group_room"
+          ]
+        },
+        {
+          "id": "science",
+          "label": "Science",
+          "name": "Science",
+          "department": "science",
+          "colour": "#2E9A9A",
+          "glyph": "flask",
+          "items": [
+            "science_lab",
+            "prep_room"
+          ]
+        },
+        {
+          "id": "humanities",
+          "label": "Humanities",
+          "name": "Humanities",
+          "department": "humanities",
+          "colour": "#8C5C37",
+          "glyph": "globe",
+          "items": [
+            "humanities_classroom"
+          ]
+        },
+        {
+          "id": "languages",
+          "label": "Languages",
+          "name": "Languages",
+          "department": "languages",
+          "colour": "#A23B86",
+          "glyph": "speech",
+          "items": [
+            "languages_classroom"
+          ]
+        },
+        {
+          "id": "computing",
+          "label": "Computing",
+          "name": "Computing",
+          "department": "computing",
+          "colour": "#263238",
+          "glyph": "monitor",
+          "items": [
+            "ict_suite"
+          ]
+        },
+        {
+          "id": "arts",
+          "label": "Arts",
+          "name": "Arts",
+          "department": "arts",
+          "colour": "#C0392B",
+          "glyph": "palette",
+          "items": [
+            "art_room",
+            "music_room",
+            "drama_studio"
+          ]
+        },
+        {
+          "id": "technology",
+          "label": "Technology",
+          "name": "Technology",
+          "department": "technology",
+          "colour": "#827717",
+          "glyph": "saw",
+          "items": [
+            "dt_workshop",
+            "food_room"
+          ]
+        },
+        {
+          "id": "pe",
+          "label": "PE",
+          "name": "PE",
+          "department": "pe",
+          "colour": "#1E6B47",
+          "glyph": "ball",
+          "items": [
+            "sports_hall",
+            "changing_room"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Support",
+      "icons": [
+        {
+          "id": "support",
+          "label": "Support",
+          "name": "Learning support",
+          "department": "support",
+          "colour": "#7A4FA3",
+          "glyph": "hand",
+          "items": [
+            "send_base",
+            "library",
+            "small_group_room"
+          ]
+        },
+        {
+          "id": "pastoral",
+          "label": "Pastoral",
+          "name": "Pastoral",
+          "department": "pastoral",
+          "colour": "#8E2B3A",
+          "glyph": "shield",
+          "items": [
+            "hoy_office",
+            "reflection_room",
+            "medical_room"
           ]
         }
       ]
@@ -57,7 +217,7 @@
           "label": "Facilities",
           "name": "Facilities",
           "department": "facilities",
-          "colour": "#FFCA28",
+          "colour": "#E3A92B",
           "glyph": "facilities",
           "catch_all": true,
           "items": [

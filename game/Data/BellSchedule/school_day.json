@@ -1,0 +1,92 @@
+[
+  {
+    "id": "arrival",
+    "name": "Gates open",
+    "short_name": "Gates",
+    "kind": "arrival",
+    "start": "08:20",
+    "end": "08:40",
+    "bell": false
+  },
+  {
+    "id": "registration",
+    "name": "Tutor time",
+    "short_name": "Reg",
+    "kind": "registration",
+    "start": "08:40",
+    "end": "08:50",
+    "bell": true
+  },
+  {
+    "id": "p1",
+    "name": "Period 1",
+    "short_name": "P1",
+    "kind": "lesson",
+    "start": "08:50",
+    "end": "09:45",
+    "bell": true
+  },
+  {
+    "id": "p2",
+    "name": "Period 2",
+    "short_name": "P2",
+    "kind": "lesson",
+    "start": "09:45",
+    "end": "10:40",
+    "bell": true
+  },
+  {
+    "id": "break",
+    "name": "Break",
+    "short_name": "Break",
+    "kind": "break",
+    "start": "10:40",
+    "end": "10:55",
+    "bell": true
+  },
+  {
+    "id": "p3",
+    "name": "Period 3",
+    "short_name": "P3",
+    "kind": "lesson",
+    "start": "10:55",
+    "end": "11:55",
+    "bell": true
+  },
+  {
+    "id": "p4",
+    "name": "Period 4",
+    "short_name": "P4",
+    "kind": "lesson",
+    "start": "11:55",
+    "end": "12:55",
+    "bell": true
+  },
+  {
+    "id": "lunch",
+    "name": "Lunch",
+    "short_name": "Lunch",
+    "kind": "lunch",
+    "start": "12:55",
+    "end": "13:40",
+    "bell": true
+  },
+  {
+    "id": "p5",
+    "name": "Period 5",
+    "short_name": "P5",
+    "kind": "lesson",
+    "start": "13:40",
+    "end": "14:40",
+    "bell": true
+  },
+  {
+    "id": "after_school",
+    "name": "After school",
+    "short_name": "Clubs",
+    "kind": "after_school",
+    "start": "14:40",
+    "end": "16:00",
+    "bell": true
+  }
+]

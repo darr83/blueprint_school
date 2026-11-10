@@ -1,4 +1,4 @@
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
@@ -9,11 +9,11 @@ public class ToiletTests
 {
     private static readonly GridRect B = StarterSite.MainBuildingFootprint;
 
-    private static CareSpace Layout(SimulationHarness h, string template, double widthM, double lengthM, WallSide side = WallSide.South) =>
+    private static Room Layout(SimulationHarness h, string template, double widthM, double lengthM, WallSide side = WallSide.South) =>
         RoomLayoutEngine.Build(h.Database.RoomTemplates[template], h.Database, "r", "R",
             RoomLayoutEngine.RectFor(new GridCoord(0, 0), Units.MetresToTiles(widthM), Units.MetresToTiles(lengthM), side), side);
 
-    private static int Count(CareSpace room, string item) => room.Furniture.Count(f => f.ItemId == item);
+    private static int Count(Room room, string item) => room.Furniture.Count(f => f.ItemId == item);
 
     /// <summary>A west wing with a corridor and, south of it, a toilet block, an accessible toilet and a staff toilet.</summary>
     private static SimulationHarness WithToilets(bool publicToilets = true, bool accessible = true, bool staff = true)

@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Data.Models;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 
 namespace BlueprintSchool.Simulation.Data;
 
@@ -13,6 +13,8 @@ public sealed class GameDatabase
     public const string NamesFolder = "Names";
     public const string FurnitureFolder = "Furniture";
     public const string RoomTemplatesFolder = "RoomTemplates";
+    public const string SubjectsFolder = "Subjects";
+    public const string BellScheduleFolder = "BellSchedule";
 
     private GameDatabase()
     {
@@ -25,6 +27,16 @@ public sealed class GameDatabase
     public IReadOnlyDictionary<string, FurnitureDefinition> Furniture { get; private init; } = null!;
 
     public IReadOnlyDictionary<string, RoomTemplate> RoomTemplates { get; private init; } = null!;
+
+    public IReadOnlyDictionary<string, SubjectDefinition> Subjects { get; private init; } = null!;
+
+    /// <summary>The parts of the school day, by id. <see cref="Bells"/> puts them in order.</summary>
+    public IReadOnlyDictionary<string, BellPeriodDefinition> BellPeriods { get; private init; } = null!;
+
+    /// <summary>The school day, period by period.</summary>
+    public SchoolDay.BellSchedule Bells => _bells ??= new SchoolDay.BellSchedule(BellPeriods.Values);
+
+    private SchoolDay.BellSchedule? _bells;
 
     /// <summary>The department every new school starts with.</summary>
     public DepartmentDefinition StartingDepartment => Departments.Values.Single(d => d.StartsUnlocked);
@@ -41,6 +53,8 @@ public sealed class GameDatabase
             Names = RecordLoader.LoadFolder<NamePool>(source, NamesFolder, errors),
             Furniture = RecordLoader.LoadFolder<FurnitureDefinition>(source, FurnitureFolder, errors),
             RoomTemplates = RecordLoader.LoadFolder<RoomTemplate>(source, RoomTemplatesFolder, errors),
+            Subjects = RecordLoader.LoadFolder<SubjectDefinition>(source, SubjectsFolder, errors),
+            BellPeriods = RecordLoader.LoadFolder<BellPeriodDefinition>(source, BellScheduleFolder, errors),
         };
 
         db.CheckDatabaseRules(errors);
@@ -84,9 +98,31 @@ public sealed class GameDatabase
                 errors.Add(new DataValidationError(file, template.Id, "furniture", $"refers to unknown furniture '{item}'."));
             }
 
-            foreach (var item in Hospital.RoomLayoutEngine.RequiredFurniture(template.Layout).Where(f => !template.Furniture.Contains(f)))
+            foreach (var item in Rooms.RoomLayoutEngine.RequiredFurniture(template.Layout).Where(f => !template.Furniture.Contains(f)))
             {
                 errors.Add(new DataValidationError(file, template.Id, "furniture", $"must include '{item}', which the {template.Layout} layout needs."));
+            }
+        }
+
+        foreach (var subject in Subjects.Values)
+        {
+            var file = $"{SubjectsFolder}/";
+            if (!Departments.ContainsKey(subject.Department))
+            {
+                errors.Add(new DataValidationError(file, subject.Id, "department", $"refers to unknown department '{subject.Department}'."));
+            }
+
+            foreach (var room in subject.Rooms.Where(r => !RoomTemplates.ContainsKey(r)))
+            {
+                errors.Add(new DataValidationError(file, subject.Id, "rooms", $"refers to unknown room '{room}'."));
+            }
+        }
+
+        if (!errors.Any(e => e.File.StartsWith(BellScheduleFolder + "/", StringComparison.Ordinal)))
+        {
+            foreach (var problem in Bells.Problems())
+            {
+                errors.Add(new DataValidationError(BellScheduleFolder, null, "(schedule)", problem));
             }
         }
     }
@@ -96,11 +132,15 @@ public sealed class GameDatabase
         IEnumerable<DepartmentDefinition>? departments = null,
         IEnumerable<NamePool>? names = null,
         IEnumerable<FurnitureDefinition>? furniture = null,
-        IEnumerable<RoomTemplate>? roomTemplates = null) => new()
+        IEnumerable<RoomTemplate>? roomTemplates = null,
+        IEnumerable<SubjectDefinition>? subjects = null,
+        IEnumerable<BellPeriodDefinition>? bellPeriods = null) => new()
     {
         Departments = (departments ?? Array.Empty<DepartmentDefinition>()).ToDictionary(r => r.Id),
         Names = (names ?? Array.Empty<NamePool>()).ToDictionary(r => r.Id),
         Furniture = (furniture ?? Array.Empty<FurnitureDefinition>()).ToDictionary(r => r.Id),
         RoomTemplates = (roomTemplates ?? Array.Empty<RoomTemplate>()).ToDictionary(r => r.Id),
+        Subjects = (subjects ?? Array.Empty<SubjectDefinition>()).ToDictionary(r => r.Id),
+        BellPeriods = (bellPeriods ?? Array.Empty<BellPeriodDefinition>()).ToDictionary(r => r.Id),
     };
 }

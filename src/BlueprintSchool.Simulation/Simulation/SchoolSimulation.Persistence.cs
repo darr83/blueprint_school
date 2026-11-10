@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Agents;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 

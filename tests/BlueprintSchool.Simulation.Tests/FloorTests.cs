@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Agents;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 
@@ -86,12 +86,12 @@ public class FloorTests
         Assert.Contains(corridor.Problems, p => p.Contains("Must join"));
 
         Build(h, "lift", LiftRect);
-        Assert.Equal(2, h.Sim.Spaces.Count(s => s.Kind == CareSpaceKind.Lift));
+        Assert.Equal(2, h.Sim.Spaces.Count(s => s.Kind == RoomKind.Lift));
         Build(h, "corridor", UpstairsCorridor(h));
 
         // A staff room upstairs, reached through the lift.
         Build(h, "staff_room", Up(h, new GridRect(B.X + 20, B.Y + 17, 14, 10)));
-        Assert.Contains(h.Sim.Spaces, s => s.Kind == CareSpaceKind.StaffRoom && h.Sim.FloorOf(s) == 1);
+        Assert.Contains(h.Sim.Spaces, s => s.Kind == RoomKind.StaffRoom && h.Sim.FloorOf(s) == 1);
     }
 
     [Fact]
@@ -143,18 +143,18 @@ public class FloorTests
         Build(h, "stairs", StairsRect);
         Build(h, "corridor", UpstairsCorridor(h));
 
-        var stairs = h.Sim.Spaces.First(s => s.Kind == CareSpaceKind.Stairs && h.Sim.FloorOf(s) == 0);
-        var lift = h.Sim.Spaces.First(s => s.Kind == CareSpaceKind.Lift && h.Sim.FloorOf(s) == 0);
+        var stairs = h.Sim.Spaces.First(s => s.Kind == RoomKind.Stairs && h.Sim.FloorOf(s) == 0);
+        var lift = h.Sim.Spaces.First(s => s.Kind == RoomKind.Lift && h.Sim.FloorOf(s) == 0);
         var from = new GridCoord(B.X + 50, B.Y + 12);
         var to = h.Sim.Site.OnFloor(new GridCoord(B.X + 52, B.Y + 12), 1);
 
         var walk = (NavPath)h.Sim.Nav.FindPath(from, to);
         var rideAt = Enumerable.Range(1, walk.Count - 1).Single(i => walk.HopAt(i) > 0);
-        Assert.Equal(stairs.PatientSpot, walk[rideAt - 1]);
+        Assert.Equal(stairs.UseSpot, walk[rideAt - 1]);
 
         var wheeled = (NavPath)h.Sim.Nav.FindPath(from, to, stepFreeOnly: true);
         var liftAt = Enumerable.Range(1, wheeled.Count - 1).Single(i => wheeled.HopAt(i) > 0);
-        Assert.Equal(lift.PatientSpot, wheeled[liftAt - 1]);
+        Assert.Equal(lift.UseSpot, wheeled[liftAt - 1]);
         Assert.Equal(VerticalTransport.LiftWait + VerticalTransport.LiftPerFloor, wheeled.HopAt(liftAt));
     }
 
@@ -200,8 +200,8 @@ public class FloorTests
         var loaded = new SimulationHarness();
         loaded.Sim.RestoreLayout(layout);
         Assert.Equal(2, loaded.Sim.FloorCount);
-        Assert.Equal(2, loaded.Sim.Spaces.Count(s => s.Kind == CareSpaceKind.Lift));
-        Assert.Contains(loaded.Sim.Spaces, s => s.Kind == CareSpaceKind.StaffRoom && loaded.Sim.FloorOf(s) == 1);
+        Assert.Equal(2, loaded.Sim.Spaces.Count(s => s.Kind == RoomKind.Lift));
+        Assert.Contains(loaded.Sim.Spaces, s => s.Kind == RoomKind.StaffRoom && loaded.Sim.FloorOf(s) == 1);
         Assert.Contains(loaded.Sim.Nav.Links, l => l.Link.StepFree);
 
         // A layout with no floor count loads as one floor.

@@ -40,7 +40,7 @@ public class SaveGameTests
     }
 
     [Theory]
-    [InlineData("My Hospital", "my_hospital")]
+    [InlineData("My School", "my_school")]
     [InlineData("  ../../etc  ", "etc")]
     [InlineData("!!!", "save")]
     public void Slot_names_are_safe(string input, string expected)

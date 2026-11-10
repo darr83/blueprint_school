@@ -145,7 +145,7 @@ public partial class RecruitmentPanel : PanelContainer
 
                 var text = $"{StaffGrades.RoleName(role.Key, plural: recommended != 1)}: {string.Join(" · ", parts)}";
                 var isShort = role.Any(n => n.Short > 0);
-                HudWidgets.SetChip(chip, text, isShort ? UiStyle.AmberTint : UiStyle.BlueTint);
+                HudWidgets.SetChip(chip, text, isShort ? UiStyle.AmberTint : UiStyle.PrimaryTint);
                 if (isShort)
                 {
                     chip.Text.AddThemeColorOverride("font_color", UiStyle.AmberText);
@@ -165,7 +165,7 @@ public partial class RecruitmentPanel : PanelContainer
     private void RefreshCandidates()
     {
         var candidates = _sim.Candidates.ToList();
-        var postingsSignature = string.Join(",", _sim.Spaces.Where(s => s.IsWard || s.IsServiceRoom).Select(s => s.Id + s.Name));
+        var postingsSignature = string.Join(",", _sim.Spaces.Where(s => s.IsTeachingRoom).Select(s => s.Id + s.Name));
         var signature = string.Join("|", candidates.Select(c => c.Id)) + postingsSignature;
         if (signature == _candidatesSignature)
         {

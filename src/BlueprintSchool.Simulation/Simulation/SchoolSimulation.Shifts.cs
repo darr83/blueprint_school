@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 
 namespace BlueprintSchool.Simulation.Simulation;

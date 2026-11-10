@@ -1,10 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BlueprintSchool.Hospital;
+using BlueprintSchool.School;
 using BlueprintSchool.Simulation.Data;
 using BlueprintSchool.Simulation.Data.Models;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 using Godot;
@@ -414,7 +414,7 @@ public partial class BuildBar : Control
         foreach (var state in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" })
         {
             var selected = state is "pressed" or "hover_pressed";
-            var box = UiStyle.Box(selected ? new Color("#F5F9FE") : UiStyle.Surface, 12, selected ? UiStyle.Blue : state == "hover" ? new Color("#9DB6DA") : UiStyle.Border);
+            var box = UiStyle.Box(selected ? new Color("#F5F9FE") : UiStyle.Surface, 12, selected ? UiStyle.Primary : state == "hover" ? new Color("#9DB6DA") : UiStyle.Border);
             if (selected)
             {
                 box.BorderWidthBottom = box.BorderWidthTop = box.BorderWidthLeft = box.BorderWidthRight = 2;
@@ -465,9 +465,9 @@ public partial class BuildBar : Control
         {
             var tag = new Label { Text = "SHARED", MouseFilter = MouseFilterEnum.Ignore };
             tag.AddThemeFontSizeOverride("font_size", 9);
-            tag.AddThemeColorOverride("font_color", UiStyle.Blue);
+            tag.AddThemeColorOverride("font_color", UiStyle.Primary);
             var chip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-            var box = UiStyle.Box(UiStyle.BlueTint, 4);
+            var box = UiStyle.Box(UiStyle.PrimaryTint, 4);
             box.ContentMarginLeft = box.ContentMarginRight = 4;
             chip.AddThemeStyleboxOverride("panel", box);
             chip.AddChild(tag);
@@ -742,7 +742,7 @@ public partial class BuildBar : Control
 
             case BuildMenu.WaitingChairs:
             {
-                var inRooms = _sim.Chairs.Count(c => _sim.Spaces.Any(r => r.Kind == CareSpaceKind.Waiting && r.Rect.Contains(c.Tile)));
+                var inRooms = _sim.Chairs.Count(c => _sim.Spaces.Any(r => r.Kind == RoomKind.Waiting && r.Rect.Contains(c.Tile)));
                 lines.Add("Place chairs in a waiting room or anywhere along a corridor. Visitors waiting at reception sit in the waiting room; anyone else waiting sits on the free chair nearest where they are going. Drag for a row, Z turns them, and pick a colour below.");
                 lines.Add($"{muted}Cost[/color]  £{_sim.ChairCost:N0} each; turning or recolouring a placed chair is free");
                 lines.Add($"{muted}Placed[/color]  {_sim.Chairs.Count} ({inRooms} in waiting rooms, {_sim.Chairs.Count - inRooms} in corridors)");
@@ -821,7 +821,7 @@ public partial class BuildBar : Control
     // ------------------------------------------------------------------ room facts, shared with the room panel
 
     /// <summary>Size, capacity, cost, equipment and staffing of a laid-out room, for the room panel.</summary>
-    public static string Describe(RoomTemplate template, CareSpace room, SchoolSimulation sim)
+    public static string Describe(RoomTemplate template, Room room, SchoolSimulation sim)
     {
         var (w, d) = RoomLayoutEngine.LocalSize(room.Rect, room.DoorSide);
         var furniture = new List<string>();
@@ -857,35 +857,26 @@ public partial class BuildBar : Control
         return string.Join("\n", lines);
     }
 
-    private static string Capacity(RoomTemplate template, CareSpace room) => template.Kind switch
+    private static string Capacity(RoomTemplate template, Room room) => template.Kind switch
     {
-        CareSpaceKind.XRay or CareSpaceKind.CT => "1 patient at a time",
-        CareSpaceKind.Theatre => "1 operation at a time",
-        CareSpaceKind.Pharmacy => "Dispenses for every ward",
-        CareSpaceKind.Clinic => "1 booked patient at a time",
-        CareSpaceKind.CathLab => "1 procedure at a time",
-        CareSpaceKind.DeliveryRoom => "1 woman in labour at a time",
-        CareSpaceKind.PlasterRoom => "1 patient at a time",
-        CareSpaceKind.PhysioGym => "Physios visit patients on every ward",
-        CareSpaceKind.OutreachOffice => "Outreach nurses check every ward",
-        CareSpaceKind.EndoscopyRecovery => "1 patient coming round",
-        CareSpaceKind.Lift => "Beds, trolleys, wheelchairs and walkers, to every floor",
-        CareSpaceKind.Stairs => "People on foot, a floor at a time",
-        CareSpaceKind.Echo or CareSpaceKind.Eeg or CareSpaceKind.Ultrasound or CareSpaceKind.Endoscopy => "1 patient at a time",
+        RoomKind.Lift => "Wheelchairs, trolleys and people on foot, to every floor",
+        RoomKind.Stairs => "People on foot, a floor at a time",
+        RoomKind.SportsHall => "Two classes for PE, or a year group for assembly",
+        RoomKind.DramaStudio => "One class",
+        RoomKind.ChangingRoom => "One class getting changed",
         _ => LayoutCapacity(template, room),
     };
 
-    private static string LayoutCapacity(RoomTemplate template, CareSpace room) => template.Layout switch
+    private static string LayoutCapacity(RoomTemplate template, Room room) => template.Layout switch
     {
-        RoomLayoutKind.BedSpace => "1 patient on a bed",
-        RoomLayoutKind.Ward => room.Beds.Count == 1 ? "1 bed" : $"{room.Beds.Count} beds",
-        RoomLayoutKind.Triage => "1 patient at a time",
+        RoomLayoutKind.Teaching => room.Seats.Count == 1 ? "1 pupil" : $"{room.Seats.Count} pupils",
+        RoomLayoutKind.Library => $"{room.Seats.Count} seats",
         RoomLayoutKind.Waiting => $"{room.Seats.Count} seats, queue of {room.QueueTiles.Count}",
         RoomLayoutKind.Office or RoomLayoutKind.StaffRoom => $"{room.Seats.Count} staff",
         _ => "—",
     };
 
-    /// <summary>One icon in the bar: a white tile with its department's colour across the top, like a hospital sign.</summary>
+    /// <summary>One icon in the bar: a white tile with its department's colour across the top, like a school sign.</summary>
     private sealed partial class BarIcon : Button
     {
         private readonly BuildMenuIcon _icon;
@@ -915,7 +906,7 @@ public partial class BuildBar : Control
             var hovered = GetGlobalRect().HasPoint(GetGlobalMousePosition());
             if (open)
             {
-                var box = UiStyle.Box(UiStyle.BlueTint, 10, UiStyle.Blue);
+                var box = UiStyle.Box(UiStyle.PrimaryTint, 10, UiStyle.Primary);
                 box.BorderWidthBottom = box.BorderWidthTop = box.BorderWidthLeft = box.BorderWidthRight = 2;
                 DrawStyleBox(box, new Rect2(Vector2.Zero, size));
             }

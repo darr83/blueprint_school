@@ -3,22 +3,16 @@ namespace BlueprintSchool.Simulation.Data.Models;
 /// <summary>How a piece of furniture is drawn.</summary>
 public enum FurnitureStyle
 {
-    /// <summary>A plain box: desks, cupboards, counters, trolleys.</summary>
+    /// <summary>A plain box: desks, cupboards, counters, benches.</summary>
     Box,
 
     /// <summary>A chair with a back rest; people can sit on it.</summary>
     Chair,
-
-    /// <summary>A hospital bed with a patient lying on it.</summary>
-    Bed,
-
-    /// <summary>An observation monitor on a stand.</summary>
-    Monitor,
 }
 
 /// <summary>
 /// A piece of furniture or equipment with its real-world size. Loaded from Data/Furniture.
-/// Room layouts place these at their true dimensions, so a bed is always 1 m by 2.1 m.
+/// Room layouts place these at their true dimensions, so a pupil desk is always 1.2 m by 0.6 m.
 /// </summary>
 public sealed class FurnitureDefinition : IDataRecord
 {
