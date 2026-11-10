@@ -1,0 +1,522 @@
+[
+  {
+    "id": "gastro_oesophageal_reflux",
+    "name": "Gastro-oesophageal reflux",
+    "department": "gastroenterology",
+    "description": "Stomach acid irritating the oesophagus, causing burning chest pain.",
+    "prevalence": 4,
+    "age_range": [
+      22,
+      85
+    ],
+    "female_fraction": 0.5,
+    "ambulance_probability": 0.08,
+    "crew_assessment": "chest pain, query indigestion",
+    "presenting_complaint": "chest_pain",
+    "symptoms": [
+      {
+        "symptom": "chest_pain",
+        "probability": 1.0
+      },
+      {
+        "symptom": "heartburn",
+        "probability": 0.85
+      },
+      {
+        "symptom": "nausea",
+        "probability": 0.3
+      }
+    ],
+    "observations": {
+      "heart_rate": [
+        82,
+        9
+      ],
+      "systolic_bp": [
+        130,
+        13
+      ],
+      "diastolic_bp": [
+        80,
+        8
+      ],
+      "respiratory_rate": [
+        16,
+        2
+      ],
+      "oxygen_saturation": [
+        98,
+        1
+      ],
+      "temperature": [
+        36.8,
+        0.3
+      ],
+      "pain_score": [
+        3,
+        6
+      ]
+    },
+    "initial_severity": [
+      0.05,
+      0.15
+    ],
+    "deterioration_per_hour": 0,
+    "deterioration_effects": {
+      "heart_rate": 0,
+      "systolic_bp": 0,
+      "respiratory_rate": 0,
+      "oxygen_saturation": 0,
+      "temperature": 0
+    },
+    "can_be_fatal": false,
+    "key_investigations": [
+      "ecg",
+      "troponin"
+    ],
+    "treatment": [
+      {
+        "type": "medication",
+        "medication": "alginate_antacid",
+        "essential": false
+      },
+      {
+        "type": "medication",
+        "medication": "omeprazole",
+        "essential": true
+      }
+    ],
+    "recovery_per_hour": 0.4,
+    "disposition": "discharge",
+    "disposition_note": "Discharged on omeprazole with GP follow-up."
+  },
+  {
+    "id": "gastroenteritis",
+    "name": "Gastroenteritis",
+    "department": "gastroenterology",
+    "description": "Infection of the gut causing vomiting and diarrhoea. Usually settles; the main risk is dehydration.",
+    "prevalence": 6,
+    "age_range": [
+      5,
+      88
+    ],
+    "female_fraction": 0.5,
+    "ambulance_probability": 0.1,
+    "crew_assessment": "vomiting and diarrhoea, dehydrated",
+    "presenting_complaint": "vomiting",
+    "symptoms": [
+      {
+        "symptom": "vomiting",
+        "probability": 1.0
+      },
+      {
+        "symptom": "diarrhoea",
+        "probability": 0.85
+      },
+      {
+        "symptom": "nausea",
+        "probability": 0.9
+      },
+      {
+        "symptom": "abdominal_pain",
+        "probability": 0.6
+      },
+      {
+        "symptom": "fever",
+        "probability": 0.3
+      },
+      {
+        "symptom": "fatigue",
+        "probability": 0.4
+      }
+    ],
+    "observations": {
+      "heart_rate": [
+        96,
+        11
+      ],
+      "systolic_bp": [
+        116,
+        12
+      ],
+      "diastolic_bp": [
+        72,
+        8
+      ],
+      "respiratory_rate": [
+        17,
+        2
+      ],
+      "oxygen_saturation": [
+        98,
+        1
+      ],
+      "temperature": [
+        37.5,
+        0.4
+      ],
+      "pain_score": [
+        2,
+        5
+      ]
+    },
+    "initial_severity": [
+      0.15,
+      0.3
+    ],
+    "deterioration_per_hour": 0.03,
+    "deterioration_effects": {
+      "heart_rate": 30,
+      "systolic_bp": -30,
+      "respiratory_rate": 6,
+      "oxygen_saturation": 0,
+      "temperature": 0.5
+    },
+    "can_be_fatal": false,
+    "key_investigations": [
+      "urea_electrolytes"
+    ],
+    "treatment": [
+      {
+        "type": "medication",
+        "medication": "ondansetron",
+        "essential": true
+      },
+      {
+        "type": "medication",
+        "medication": "compound_sodium_lactate",
+        "essential": false
+      }
+    ],
+    "recovery_per_hour": 0.35,
+    "disposition": "discharge",
+    "disposition_note": "Discharged with oral rehydration advice once tolerating fluids."
+  },
+  {
+    "id": "upper_gi_bleed",
+    "name": "Upper gastrointestinal bleed",
+    "department": "gastroenterology",
+    "description": "Bleeding from the oesophagus, stomach or duodenum, often from an ulcer. Can be torrential.",
+    "prevalence": 2,
+    "age_range": [
+      35,
+      95
+    ],
+    "female_fraction": 0.4,
+    "ambulance_probability": 0.6,
+    "crew_assessment": "vomiting blood, potential G I bleed",
+    "presenting_complaint": "haematemesis",
+    "symptoms": [
+      {
+        "symptom": "haematemesis",
+        "probability": 1
+      },
+      {
+        "symptom": "melaena",
+        "probability": 0.6
+      },
+      {
+        "symptom": "dizziness",
+        "probability": 0.5
+      },
+      {
+        "symptom": "abdominal_pain",
+        "probability": 0.3
+      }
+    ],
+    "observations": {
+      "heart_rate": [
+        110,
+        14
+      ],
+      "systolic_bp": [
+        104,
+        16
+      ],
+      "diastolic_bp": [
+        64,
+        10
+      ],
+      "respiratory_rate": [
+        20,
+        2
+      ],
+      "oxygen_saturation": [
+        97,
+        1
+      ],
+      "temperature": [
+        36.6,
+        0.3
+      ],
+      "pain_score": [
+        1,
+        4
+      ]
+    },
+    "initial_severity": [
+      0.35,
+      0.6
+    ],
+    "deterioration_per_hour": 0.08,
+    "deterioration_effects": {
+      "heart_rate": 35,
+      "systolic_bp": -55,
+      "respiratory_rate": 8,
+      "oxygen_saturation": -3,
+      "temperature": 0
+    },
+    "can_be_fatal": true,
+    "key_investigations": [
+      "full_blood_count",
+      "urea_electrolytes",
+      "venous_blood_gas",
+      "ogd"
+    ],
+    "treatment": [
+      {
+        "type": "medication",
+        "medication": "sodium_chloride",
+        "essential": true
+      },
+      {
+        "type": "procedure",
+        "name": "Blood transfusion",
+        "performed_by": "nurse",
+        "minutes": 20,
+        "essential": true
+      },
+      {
+        "type": "procedure",
+        "name": "Glasgow-Blatchford score and endoscopy referral",
+        "performed_by": "doctor",
+        "minutes": 10,
+        "essential": false
+      }
+    ],
+    "recovery_per_hour": 0.015,
+    "disposition": "admit",
+    "disposition_note": "Admitted for transfusion and endoscopy within 24 hours.",
+    "length_of_stay_hours": [
+      48,
+      120
+    ]
+  },
+  {
+    "id": "decompensated_cirrhosis",
+    "name": "Liver cirrhosis with fluid",
+    "department": "gastroenterology",
+    "description": "A scarred liver that has stopped coping: yellow skin, a tummy swollen with fluid and confusion. The fluid is drained.",
+    "prevalence": 1,
+    "age_range": [
+      35,
+      85
+    ],
+    "female_fraction": 0.35,
+    "ambulance_probability": 0.4,
+    "crew_assessment": "jaundice and swollen abdomen",
+    "presenting_complaint": "abdominal_distension",
+    "symptoms": [
+      {
+        "symptom": "abdominal_distension",
+        "probability": 1.0
+      },
+      {
+        "symptom": "jaundice",
+        "probability": 0.8
+      },
+      {
+        "symptom": "confusion",
+        "probability": 0.3
+      },
+      {
+        "symptom": "abdominal_pain",
+        "probability": 0.4
+      },
+      {
+        "symptom": "breathlessness",
+        "probability": 0.3
+      },
+      {
+        "symptom": "fatigue",
+        "probability": 0.7
+      }
+    ],
+    "observations": {
+      "heart_rate": [
+        98,
+        10
+      ],
+      "systolic_bp": [
+        104,
+        12
+      ],
+      "diastolic_bp": [
+        62,
+        8
+      ],
+      "respiratory_rate": [
+        20,
+        2
+      ],
+      "oxygen_saturation": [
+        96,
+        1.2
+      ],
+      "temperature": [
+        37.1,
+        0.4
+      ],
+      "pain_score": [
+        2,
+        5
+      ]
+    },
+    "initial_severity": [
+      0.3,
+      0.45
+    ],
+    "deterioration_per_hour": 0.02,
+    "deterioration_effects": {
+      "heart_rate": 25,
+      "systolic_bp": -30,
+      "respiratory_rate": 6,
+      "oxygen_saturation": -3,
+      "temperature": 0.5
+    },
+    "can_be_fatal": true,
+    "key_investigations": [
+      "liver_function_tests",
+      "clotting_screen",
+      "ascitic_tap",
+      "urea_electrolytes"
+    ],
+    "treatment": [
+      {
+        "type": "procedure",
+        "name": "Ascitic drain",
+        "performed_by": "doctor",
+        "minutes": 30,
+        "essential": true
+      },
+      {
+        "type": "medication",
+        "medication": "human_albumin",
+        "essential": false
+      },
+      {
+        "type": "medication",
+        "medication": "pabrinex",
+        "essential": false
+      }
+    ],
+    "recovery_per_hour": 0.02,
+    "disposition": "admit",
+    "disposition_note": "Admitted for a large-volume ascitic drain with albumin and liver team review.",
+    "length_of_stay_hours": [
+      96,
+      240
+    ]
+  },
+  {
+    "id": "ulcerative_colitis_flare",
+    "name": "Ulcerative colitis flare",
+    "department": "gastroenterology",
+    "description": "A bad flare of inflammation in the bowel: bloody diarrhoea many times a day. Needs IV steroids.",
+    "prevalence": 1.2,
+    "age_range": [
+      16,
+      70
+    ],
+    "female_fraction": 0.5,
+    "ambulance_probability": 0.15,
+    "crew_assessment": "bloody diarrhoea, known colitis",
+    "presenting_complaint": "bloody_diarrhoea",
+    "symptoms": [
+      {
+        "symptom": "bloody_diarrhoea",
+        "probability": 1.0
+      },
+      {
+        "symptom": "abdominal_pain",
+        "probability": 0.8
+      },
+      {
+        "symptom": "fever",
+        "probability": 0.4
+      },
+      {
+        "symptom": "fatigue",
+        "probability": 0.6
+      }
+    ],
+    "observations": {
+      "heart_rate": [
+        104,
+        11
+      ],
+      "systolic_bp": [
+        118,
+        12
+      ],
+      "diastolic_bp": [
+        72,
+        8
+      ],
+      "respiratory_rate": [
+        18,
+        2
+      ],
+      "oxygen_saturation": [
+        98,
+        1
+      ],
+      "temperature": [
+        37.7,
+        0.4
+      ],
+      "pain_score": [
+        3,
+        6
+      ]
+    },
+    "initial_severity": [
+      0.25,
+      0.4
+    ],
+    "deterioration_per_hour": 0.02,
+    "deterioration_effects": {
+      "heart_rate": 25,
+      "systolic_bp": -30,
+      "respiratory_rate": 4,
+      "oxygen_saturation": -1,
+      "temperature": 0.6
+    },
+    "can_be_fatal": false,
+    "key_investigations": [
+      "flexible_sigmoidoscopy",
+      "full_blood_count",
+      "c_reactive_protein",
+      "urea_electrolytes"
+    ],
+    "treatment": [
+      {
+        "type": "medication",
+        "medication": "hydrocortisone",
+        "essential": true
+      },
+      {
+        "type": "medication",
+        "medication": "sodium_chloride",
+        "essential": false
+      }
+    ],
+    "recovery_per_hour": 0.04,
+    "disposition": "admit",
+    "disposition_note": "Acute severe colitis. Admitted for IV hydrocortisone and daily stool charts.",
+    "length_of_stay_hours": [
+      96,
+      192
+    ]
+  }
+]
