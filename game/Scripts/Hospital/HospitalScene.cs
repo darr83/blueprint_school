@@ -4,7 +4,6 @@ using System.Linq;
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Hospital;
 using BlueprintSchool.Simulation.Simulation;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 using BlueprintSchool.UI;
@@ -13,7 +12,7 @@ using Godot;
 namespace BlueprintSchool.Hospital;
 
 /// <summary>
-/// What clicking on the map picks. In play mode: patients, staff and beds. In build mode: rooms,
+/// What clicking on the map picks. In play mode: staff. In build mode: rooms,
 /// furniture and equipment, and the build menu is open.
 /// </summary>
 public enum GameMode
@@ -25,7 +24,7 @@ public enum GameMode
 /// <summary>
 /// The main play scene. Wires the current <see cref="GameSession"/> to the site and department
 /// views, the people in them, the camera and HUD, and drives the simulation clock every frame.
-/// In play mode clicking a patient, member of staff or bed opens their panel; in build mode
+/// In play mode clicking a member of staff opens their panel; in build mode
 /// clicking a room or a piece of furniture does.
 /// </summary>
 public partial class HospitalScene : Node2D
@@ -142,7 +141,7 @@ public partial class HospitalScene : Node2D
         _hud.Initialise(_session, _build);
 
         // Sound: ambience, monitors, machines, chatter, sirens. Only reads the game.
-        var audio = new BlueprintSchool.Audio.HospitalAudio { Name = "Audio" };
+        var audio = new BlueprintSchool.Audio.SchoolAudio { Name = "Audio" };
         AddChild(audio);
         audio.Initialise(_session, _world);
         _hud.RoomInfo.MoveRequested += room =>
@@ -153,32 +152,19 @@ public partial class HospitalScene : Node2D
         };
         _hud.ModeRequested += SetMode;
         _hud.ItemInfo.RoomRequested += room => _hud.ShowRoom(room);
-        _hud.ItemInfo.PatientRequested += p => SelectPatient(p, centre: true);
         _hud.GridToggled += ToggleGrid;
         _hud.RoutesToggled += ToggleRoutes;
         _hud.MenuRequested += OpenPauseMenu;
         _cursor.HoveredTileChanged += (x, y, onSite) => _hud.ShowHoveredTile(x, y, onSite, _session.Site);
-        _hud.Record.CloseRequested += ClearSelection;
-        _hud.Record.FocusRequested += p => FocusOn(p);
-        _hud.Feed.PatientClicked += id =>
+        _hud.Feed.PersonClicked += id =>
         {
-            if (_session.Simulation.FindPatient(id) is { } patient)
+            if (_session.Simulation.Staff.FirstOrDefault(m => m.Id == id) is { } member)
             {
-                SelectPatient(patient, centre: true);
-            }
-        };
-        _hud.Roster.PatientClicked += p => SelectPatient(p, centre: true);
-        _hud.Crash.FollowRequested += id =>
-        {
-            if (_session.Simulation.FindPatient(id) is { } patient)
-            {
-                SelectPatient(patient, centre: true);
-                _hud.Crash.Expanded = true;
+                SelectStaff(member, centre: true);
             }
         };
         _hud.Roster.StaffClicked += m => SelectStaff(m, centre: true);
         _hud.Rota.ShowOnMapRequested += m => SelectStaff(m, centre: true);
-        _hud.Clinics.OutpatientClicked += o => SelectOutpatient(o, centre: true);
         _hud.StaffInfo.CloseRequested += ClearSelection;
         _hud.StaffInfo.FocusRequested += m => FocusOn(m);
         _hud.ZoomRequested += factor => _camera.ZoomBy(factor);
@@ -195,9 +181,7 @@ public partial class HospitalScene : Node2D
         _hud.SelectionAnchor = () => _world.Selected switch
         {
             Agent a when !_world.OnViewFloor(a) => null,
-            Patient p when _world.IsOnMap(p) => (_world.FootPosition(p), p.FullName),
             StaffMember m => (_world.FootPosition(m), m.Name),
-            Outpatient o when _session.Simulation.FindAppointment(o.AppointmentId) is { } a => (_world.FootPosition(o), a.FullName),
             _ => null,
         };
     }
@@ -220,19 +204,6 @@ public partial class HospitalScene : Node2D
         _hud.HideRightPanels();
     }
 
-    /// <summary>Selects a patient and opens their record (switching to play mode).</summary>
-    public void SelectPatient(Patient patient, bool centre = false)
-    {
-        SetMode(GameMode.Play);
-        _world.Selected = patient;
-        _hud.HideRightPanels();
-        _hud.Record.Show(patient);
-        if (centre && patient.IsInDepartment)
-        {
-            FocusOn(patient);
-        }
-    }
-
     /// <summary>Selects a member of staff and opens their panel.</summary>
     public void SelectStaff(StaffMember member, bool centre = false)
     {
@@ -245,28 +216,12 @@ public partial class HospitalScene : Node2D
         }
     }
 
-    /// <summary>Selects a clinic patient and opens the clinic calendars with them picked out.</summary>
-    public void SelectOutpatient(Outpatient outpatient, bool centre = false)
-    {
-        SetMode(GameMode.Play);
-        _world.Selected = outpatient;
-        _hud.HideRightPanels();
-        _hud.Clinics.SelectedOutpatientId = outpatient.Id;
-        _hud.Clinics.ShowToday();
-        if (centre)
-        {
-            FocusOn(outpatient);
-        }
-    }
-
     /// <summary>For the smoke test: deselects whoever is selected.</summary>
     public void ClearSelectionForTest() => ClearSelection();
 
     private void ClearSelection()
     {
         _world.Selected = null;
-        _hud.Clinics.SelectedOutpatientId = null;
-        _hud.Record.Visible = false;
         _hud.StaffInfo.Visible = false;
     }
 
@@ -325,7 +280,7 @@ public partial class HospitalScene : Node2D
 
         switch (key.Keycode)
         {
-            case Key.Escape when _hud.Record.Visible || _hud.StaffInfo.Visible || _hud.Roster.Visible || _hud.RoomInfo.Visible || _hud.Decorate.Visible || _hud.ItemInfo.Visible || _hud.Finances.Visible || _hud.Recruitment.Visible || _hud.Clinics.Visible || _hud.Rota.Visible || _hud.StatsScreen.Visible:
+            case Key.Escape when _hud.StaffInfo.Visible || _hud.Roster.Visible || _hud.RoomInfo.Visible || _hud.Decorate.Visible || _hud.ItemInfo.Visible || _hud.Finances.Visible || _hud.Recruitment.Visible || _hud.Rota.Visible || _hud.StatsScreen.Visible:
                 ClearSelection();
                 _hud.HideRightPanels();
                 break;
@@ -341,17 +296,11 @@ public partial class HospitalScene : Node2D
             case Key.Escape:
                 OpenPauseMenu();
                 break;
-            case Key.P:
-                _hud.ToggleRoster(staff: false);
-                break;
             case Key.T:
                 _hud.ToggleRota();
                 break;
             case Key.F:
                 _hud.ToggleFinances();
-                break;
-            case Key.C when !key.CtrlPressed:
-                _hud.ToggleClinics();
                 break;
             case Key.H:
                 _hud.ToggleRecruitment();
@@ -397,7 +346,7 @@ public partial class HospitalScene : Node2D
     }
 
     /// <summary>
-    /// A left click on the map. Play mode picks a person, or failing that a bed; build mode picks a
+    /// A left click on the map. Play mode picks a person; build mode picks a
     /// piece of furniture, or failing that the room. Clicking empty floor closes the panel.
     /// </summary>
     public void ClickAt(Vector2 world)
@@ -406,28 +355,13 @@ public partial class HospitalScene : Node2D
         {
             switch (_world.HitTest(world))
             {
-                case Patient patient:
-                    SelectPatient(patient);
-                    return;
                 case StaffMember member:
                     SelectStaff(member);
-                    return;
-                case Outpatient outpatient:
-                    SelectOutpatient(outpatient);
                     return;
             }
 
             ClearSelection();
-            if (ItemAt(world, bedsOnly: true) is { } bed)
-            {
-                _hud.HideRightPanels();
-                _hud.ItemInfo.ShowBed(bed.Room, bed.Item);
-            }
-            else
-            {
-                _hud.ItemInfo.Close();
-            }
-
+            _hud.ItemInfo.Close();
             return;
         }
 
@@ -649,7 +583,7 @@ public partial class HospitalScene : Node2D
             return;
         }
 
-        var menu = PauseMenu.Create(CaptureCamera, _session.HospitalName);
+        var menu = PauseMenu.Create(CaptureCamera, _session.SchoolName);
         var layer = new CanvasLayer { Layer = 20, ProcessMode = ProcessModeEnum.Always };
         layer.AddChild(menu);
         menu.Closed += () => layer.QueueFree();

@@ -44,7 +44,7 @@ public partial class GameManager : Node
         try
         {
             Database = GameDatabase.Load(new GodotDataSource());
-            GD.Print($"Loaded game data: {Database.Departments.Count} departments, {Database.Symptoms.Count} symptoms, {Database.Conditions.Count} conditions, {Database.Investigations.Count} investigations, {Database.Medications.Count} medications.");
+            GD.Print($"Loaded game data: {Database.Departments.Count} departments, {Database.RoomTemplates.Count} room templates, {Database.Furniture.Count} furniture items.");
         }
         catch (DataLoadException ex)
         {
@@ -53,14 +53,14 @@ public partial class GameManager : Node
         }
     }
 
-    public void StartNewGame(string hospitalName, Simulation.Simulation.StartingHospital start = Simulation.Simulation.StartingHospital.SmallEmergency, bool unlimitedMoney = false)
+    public void StartNewGame(string schoolName, bool unlimitedMoney = false)
     {
         if (Database is null)
         {
             return;
         }
 
-        Session = GameSession.CreateNew(Database, hospitalName, start, unlimitedMoney);
+        Session = GameSession.CreateNew(Database, schoolName, unlimitedMoney);
         ChangeScene(HospitalScene);
     }
 
@@ -69,7 +69,7 @@ public partial class GameManager : Node
     {
         if (Database is not null)
         {
-            Session = GameSession.CreateNew(Database, "Blueprint General Hospital");
+            Session = GameSession.CreateNew(Database, "Blueprint Academy");
         }
     }
 

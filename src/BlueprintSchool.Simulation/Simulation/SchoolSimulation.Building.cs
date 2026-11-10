@@ -80,7 +80,7 @@ public sealed partial class SchoolSimulation
     /// <summary>Tiles in front of an entrance that must stay clear for people and ambulances.</summary>
     private const int EntranceApproach = 4;
 
-    /// <summary>Rooms the hospital cannot run without; the last one can't be demolished. (None: even the waiting room can go.)</summary>
+    /// <summary>Rooms the school cannot run without; the last one can't be demolished. (None for now.)</summary>
     private static readonly CareSpaceKind[] RequiredKinds = Array.Empty<CareSpaceKind>();
 
     private int _nextRoomNumber = 1;
@@ -454,7 +454,7 @@ public sealed partial class SchoolSimulation
 
         if (!Site.InBounds(new GridCoord(area.X, area.Y)) || !Site.InBounds(new GridCoord(area.Right - 1, area.Bottom - 1)))
         {
-            problems.Add("Must be inside the hospital site.");
+            problems.Add("Must be inside the school site.");
             return new BuildCheck(cost, problems);
         }
 

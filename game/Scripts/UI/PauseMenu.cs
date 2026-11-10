@@ -9,18 +9,18 @@ public partial class PauseMenu : ModalPanel
 {
     private Func<CameraState> _captureCamera = () => new CameraState(0, 0, 1);
 
-    public static PauseMenu Create(Func<CameraState> captureCamera, string hospitalName)
+    public static PauseMenu Create(Func<CameraState> captureCamera, string schoolName)
     {
         var menu = new PauseMenu { _captureCamera = captureCamera };
-        menu.Build(hospitalName);
+        menu.Build(schoolName);
         return menu;
     }
 
-    private void Build(string hospitalName)
+    private void Build(string schoolName)
     {
         Content.AddChild(UiStyle.Heading("Paused"));
         Content.AddChild(UiStyle.Button("Resume", Close));
-        Content.AddChild(UiStyle.SecondaryButton("Save Game", () => AddChild(SaveGamePanel.Create(_captureCamera, hospitalName))));
+        Content.AddChild(UiStyle.SecondaryButton("Save Game", () => AddChild(SaveGamePanel.Create(_captureCamera, schoolName))));
         Content.AddChild(UiStyle.SecondaryButton("Load Game", () => AddChild(new LoadGamePanel())));
         Content.AddChild(UiStyle.SecondaryButton("Settings", () => AddChild(new SettingsPanel())));
         Content.AddChild(UiStyle.SecondaryButton("Exit to Main Menu", () =>

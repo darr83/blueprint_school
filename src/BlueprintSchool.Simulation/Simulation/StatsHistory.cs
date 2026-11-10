@@ -40,7 +40,7 @@ public sealed class GaugeReadings
     }
 }
 
-/// <summary>Everything counted in one hour, one day or since the hospital opened.</summary>
+/// <summary>Everything counted in one hour, one day or since the school opened.</summary>
 public sealed class StatsBucket
 {
     public DateTime Start { get; set; }
@@ -75,9 +75,9 @@ public sealed class StatsHistoryState
 }
 
 /// <summary>
-/// The hospital's figures over time: counts (arrivals, deaths, money...) and regular readings of gauges
+/// The school's figures over time: counts (hires, money...) and regular readings of gauges
 /// (patients in A&amp;E, ward beds in use...), kept hour by hour for the last day, day by day for the last
-/// 28 days, and in one running total since the hospital opened.
+/// 28 days, and in one running total since the school opened.
 /// </summary>
 public sealed class StatsHistory
 {

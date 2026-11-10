@@ -7,9 +7,9 @@ using Godot;
 namespace BlueprintSchool.UI;
 
 /// <summary>
-/// The Stats screen: every figure the hospital keeps, for the last 24 hours, 7 days, 28 days or since
-/// opening. Headline tiles along the top, two charts, then a card per area (A&amp;E, wards, theatres and
-/// clinics, maternity, staff, money).
+/// The Stats screen: every figure the school keeps, for the last 24 hours, 7 days, 28 days or since
+/// opening. Headline tiles along the top, two charts, then a card per area (staff and money for now;
+/// pupils, lessons and results come with later milestones).
 /// </summary>
 public partial class StatsPanel : PanelContainer
 {
@@ -25,7 +25,6 @@ public partial class StatsPanel : PanelContainer
     private readonly Label _moneyTitle = HudWidgets.Section(string.Empty);
     private readonly StatsBarChart _arrivalsChart = new(UiStyle.Blue, UiStyle.Red);
     private readonly StatsBarChart _moneyChart = new(Positive, UiStyle.Red);
-    private PanelContainer _maternity = null!;
     private SchoolSimulation _sim = null!;
     private StatsPeriod _period = StatsPeriod.Last24Hours;
     private double _refresh;
@@ -48,11 +47,9 @@ public partial class StatsPanel : PanelContainer
         tiles.AddThemeConstantOverride("separation", 10);
         foreach (var (caption, tip) in new[]
         {
-            ("A&E arrivals", "Everyone who came to A&E, by ambulance or on foot"),
-            ("Seen in 4 hours", "Patients who left A&E within four hours of arriving (the standard is 95%)"),
-            ("Average time in A&E", "From arriving to going home, to a ward or elsewhere"),
-            ("Average wait for a doctor", "From arriving to being seen by a doctor"),
-            ("Ward beds in use", "Average share of ward beds with a patient in them"),
+            ("Staff on shift", "Average number of staff at work"),
+            ("Hired", "Staff taken on"),
+            ("Left", "Staff who left or were let go"),
             ("Money in less out", "Income less spending, cheats left out"),
         })
         {
@@ -78,50 +75,9 @@ public partial class StatsPanel : PanelContainer
         grid.AddThemeConstantOverride("v_separation", 14);
         body.AddChild(grid);
 
-        grid.AddChild(Card("A&E arrivals", new[]
+        grid.AddChild(Card("Staff", new[]
         {
-            ("arrivals", "Arrivals"), ("ambulance", "By ambulance"), ("walk_in", "Walked in"),
-            ("red", "Triaged red"), ("amber", "Triaged amber"), ("green", "Triaged green"), ("handover", "Ambulance handover"),
-        }));
-        grid.AddChild(Card("A&E performance", new[]
-        {
-            ("four_hour", "Seen within 4 hours"), ("breaches", "Over 4 hours"), ("time_in_ae", "Average time in A&E"),
-            ("to_doctor", "Average wait for a doctor"), ("accuracy", "Diagnoses right first time"), ("missed", "Missed diagnoses"),
-        }));
-        grid.AddChild(Card("Where A&E patients went", new[]
-        {
-            ("left", "Left A&E"), ("home", "Home"), ("admitted", "Admitted to a ward"), ("transferred", "Transferred"),
-            ("unseen", "Left without being seen"), ("died", "Died in A&E"),
-        }));
-        grid.AddChild(Card("How busy it was", new[]
-        {
-            ("in_ae", "Patients in A&E"), ("waiting", "Waiting"), ("longest", "Longest wait"), ("ambulances", "Ambulances queueing"),
-            ("bed_wait", "Waiting for a ward bed"), ("occupancy", "Ward beds in use"),
-        }));
-        grid.AddChild(Card("Wards", new[]
-        {
-            ("on_wards", "Patients on the wards"), ("ward_admissions", "Admitted from A&E"), ("ward_home", "Home from a ward"),
-            ("ward_died", "Died on a ward"), ("corrected", "Diagnoses corrected on the ward"),
-        }));
-        grid.AddChild(Card("Cardiac arrests", new[]
-        {
-            ("arrests", "Cardiac arrests"), ("arrest_rosc", "Heart restarted"), ("arrest_survived", "Survived to leave hospital"),
-            ("arrest_cpr", "Average time to CPR"), ("arrest_shock", "Average time to first shock"),
-        }));
-        grid.AddChild(Card("Theatres, imaging and clinics", new[]
-        {
-            ("operations", "Operations"), ("scans", "X-rays and scans"), ("clinic_seen", "Clinic patients seen"),
-            ("dna", "Did not attend clinic"),
-        }));
-        _maternity = Card("Maternity", new[]
-        {
-            ("births", "Babies born"), ("caesareans", "Caesarean sections"), ("neonatal", "To the neonatal unit"),
-            ("neonatal_out", "Babies sent elsewhere"), ("diverted", "Mothers sent elsewhere"),
-        });
-        grid.AddChild(_maternity);
-        grid.AddChild(Card("Staff and facilities", new[]
-        {
-            ("on_shift", "Staff on shift"), ("hired", "Hired"), ("left_staff", "Left"), ("accidents", "Toilet accidents"),
+            ("on_shift", "Staff on shift"), ("hired", "Hired"), ("left_staff", "Left"),
         }));
         grid.AddChild(Card("Money", Enum.GetValues<MoneyCategory>().Select(c => ($"money_{c}", FinancePanel.CategoryName(c)))
             .Append(("income", "Money in")).Append(("spending", "Money out")).Append(("net", "Money in less out")).ToArray()));
@@ -159,7 +115,7 @@ public partial class StatsPanel : PanelContainer
         header.AddThemeConstantOverride("separation", 12);
         var titles = new VBoxContainer { SizeFlagsHorizontal = SizeFlags.ExpandFill };
         titles.AddThemeConstantOverride("separation", 0);
-        var title = new Label { Text = "Hospital stats" };
+        var title = new Label { Text = "School stats" };
         title.AddThemeFontSizeOverride("font_size", 22);
         titles.AddChild(title);
         titles.AddChild(_caption);
@@ -303,82 +259,13 @@ public partial class StatsPanel : PanelContainer
             ? $"All time · since {history.Since:ddd d MMM yyyy, HH:mm} ({Span(covered)})"
             : full ? $"{name} · up to {now:ddd d MMM, HH:mm}" : $"{name} · only {Span(covered)} so far";
 
-        // A&E.
-        var arrivals = T(StatKeys.Arrivals);
-        var ambulance = T(StatKeys.AmbulanceArrivals);
-        var departed = T(StatKeys.Departed);
-        var within = T(StatKeys.WithinFourHours);
-        var seenByDoctor = T(StatKeys.SeenByDoctor);
-        var handovers = T(StatKeys.Handovers);
-        var diagnoses = T(StatKeys.Diagnoses);
-        double? fourHour = departed > 0 ? within / departed : null;
-        double? timeInAe = departed > 0 ? T(StatKeys.MinutesInDepartment) / departed : null;
-        double? toDoctor = seenByDoctor > 0 ? T(StatKeys.MinutesToDoctor) / seenByDoctor : null;
-
-        SetValue("arrivals", Count(arrivals));
-        SetValue("ambulance", Count(ambulance), Share(ambulance, arrivals));
-        SetValue("walk_in", Count(arrivals - ambulance), Share(arrivals - ambulance, arrivals));
-        var triaged = T(StatKeys.TriagedRed) + T(StatKeys.TriagedAmber) + T(StatKeys.TriagedGreen);
-        SetValue("red", Count(T(StatKeys.TriagedRed)), Share(T(StatKeys.TriagedRed), triaged), new Color(ClinicalText.RedHex));
-        SetValue("amber", Count(T(StatKeys.TriagedAmber)), Share(T(StatKeys.TriagedAmber), triaged), UiStyle.AmberText);
-        SetValue("green", Count(T(StatKeys.TriagedGreen)), Share(T(StatKeys.TriagedGreen), triaged), Positive);
-        SetValue("handover", handovers > 0 ? Minutes(T(StatKeys.HandoverMinutes) / handovers) : "–", handovers > 0 ? $"{handovers:N0} handovers" : string.Empty);
-
-        SetValue("four_hour", fourHour is { } f ? $"{f * 100:0}%" : "–", departed > 0 ? $"{within:N0} of {departed:N0}" : string.Empty, fourHour is { } ff ? FourHourColour(ff) : null);
-        SetValue("breaches", Count(departed - within), null, departed - within > 0 ? UiStyle.AmberText : null);
-        SetValue("time_in_ae", timeInAe is { } t ? Minutes(t) : "–");
-        SetValue("to_doctor", toDoctor is { } d ? Minutes(d) : "–", seenByDoctor > 0 ? $"{seenByDoctor:N0} seen" : string.Empty);
-        SetValue("accuracy", diagnoses > 0 ? $"{T(StatKeys.DiagnosesCorrect) / diagnoses * 100:0}%" : "–", diagnoses > 0 ? $"of {diagnoses:N0}" : string.Empty);
-        SetValue("missed", Count(T(StatKeys.MissedDiagnoses)));
-
-        SetValue("left", Count(departed));
-        SetValue("home", Count(T(StatKeys.Discharged)), Share(T(StatKeys.Discharged), departed));
-        SetValue("admitted", Count(T(StatKeys.Admitted)), Share(T(StatKeys.Admitted), departed));
-        SetValue("transferred", Count(T(StatKeys.Transferred)), Share(T(StatKeys.Transferred), departed));
-        SetValue("unseen", Count(T(StatKeys.LeftUnseen)), Share(T(StatKeys.LeftUnseen), departed), T(StatKeys.LeftUnseen) > 0 ? UiStyle.AmberText : null);
-        SetValue("died", Count(T(StatKeys.Deaths)), Share(T(StatKeys.Deaths), departed), T(StatKeys.Deaths) > 0 ? UiStyle.Red : null);
-
-        Gauge("in_ae", G(StatKeys.InDepartment), v => $"{v:0.#}", v => $"{v:0}");
-        Gauge("waiting", G(StatKeys.Waiting), v => $"{v:0.#}", v => $"{v:0}");
-        var longest = G(StatKeys.LongestWait);
-        SetValue("longest", longest.Count > 0 ? Minutes(longest.Peak) : "–", longest.Count > 0 ? "at worst" : string.Empty, longest.Peak >= 240 ? UiStyle.Red : longest.Peak >= 120 ? UiStyle.AmberText : null);
-        Gauge("ambulances", G(StatKeys.AmbulancesWaiting), v => $"{v:0.#}", v => $"{v:0}");
-        Gauge("bed_wait", G(StatKeys.AwaitingBed), v => $"{v:0.#}", v => $"{v:0}");
-        var occupancy = G(StatKeys.WardOccupancy);
-        Gauge("occupancy", occupancy, v => $"{v * 100:0}%", v => $"{v * 100:0}%");
-
-        // Wards, services, maternity, staff.
-        Gauge("on_wards", G(StatKeys.OnWards), v => $"{v:0.#}", v => $"{v:0}");
-        SetValue("ward_admissions", Count(T(StatKeys.Admitted)));
-        SetValue("ward_home", Count(T(StatKeys.WardDischarges)));
-        SetValue("ward_died", Count(T(StatKeys.WardDeaths)), null, T(StatKeys.WardDeaths) > 0 ? UiStyle.Red : null);
-        SetValue("corrected", Count(T(StatKeys.WardCorrections)));
-        var arrests = T(StatKeys.Arrests);
-        SetValue("arrests", Count(arrests), null, arrests > 0 ? UiStyle.Red : null);
-        SetValue("arrest_rosc", Count(T(StatKeys.ArrestsRosc)), Share(T(StatKeys.ArrestsRosc), arrests));
-        SetValue("arrest_survived", Count(T(StatKeys.ArrestSurvivors)), Share(T(StatKeys.ArrestSurvivors), arrests));
-        var cprStarts = T(StatKeys.ArrestCprStarts);
-        var shocks = T(StatKeys.ArrestFirstShocks);
-        SetValue("arrest_cpr", cprStarts > 0 ? MinSec(T(StatKeys.ArrestSecondsToCpr) / cprStarts) : "–", cprStarts > 0 ? $"{cprStarts:N0} arrests" : string.Empty,
-            cprStarts > 0 && T(StatKeys.ArrestSecondsToCpr) / cprStarts > 120 ? UiStyle.AmberText : null);
-        SetValue("arrest_shock", shocks > 0 ? MinSec(T(StatKeys.ArrestSecondsToShock) / shocks) : "–", shocks > 0 ? $"{shocks:N0} shockable" : string.Empty,
-            shocks > 0 && T(StatKeys.ArrestSecondsToShock) / shocks > 180 ? UiStyle.AmberText : null);
-        SetValue("operations", Count(T(StatKeys.Operations)));
-        SetValue("scans", Count(T(StatKeys.Scans)));
-        var seen = T(StatKeys.ClinicSeen);
-        var dna = T(StatKeys.ClinicDidNotAttend);
-        SetValue("clinic_seen", Count(seen));
-        SetValue("dna", Count(dna), Share(dna, seen + dna));
-        _maternity.Visible = _sim.IsUnlocked(SchoolSimulation.MaternityDepartmentId) || history.Total(StatsPeriod.AllTime, now, StatKeys.Births) > 0;
-        SetValue("births", Count(T(StatKeys.Births)));
-        SetValue("caesareans", Count(T(StatKeys.Caesareans)), Share(T(StatKeys.Caesareans), T(StatKeys.Births)));
-        SetValue("neonatal", Count(T(StatKeys.NeonatalAdmissions)));
-        SetValue("neonatal_out", Count(T(StatKeys.NeonatalTransfers)));
-        SetValue("diverted", Count(T(StatKeys.MaternityDiverted)), null, T(StatKeys.MaternityDiverted) > 0 ? UiStyle.AmberText : null);
-        Gauge("on_shift", G(StatKeys.StaffOnDuty), v => $"{v:0.#}", v => $"{v:0}");
-        SetValue("hired", Count(T(StatKeys.Hired)));
-        SetValue("left_staff", Count(T(StatKeys.Left)));
-        SetValue("accidents", Count(T(StatKeys.ToiletAccidents)), null, T(StatKeys.ToiletAccidents) > 0 ? UiStyle.AmberText : null);
+        // Staff.
+        var onShift = G(StatKeys.StaffOnDuty);
+        Gauge("on_shift", onShift, v => $"{v:0.#}", v => $"{v:0}");
+        var hired = T(StatKeys.Hired);
+        var left = T(StatKeys.Left);
+        SetValue("hired", Count(hired));
+        SetValue("left_staff", Count(left), null, left > 0 ? UiStyle.AmberText : null);
 
         // Money.
         double income = 0, spending = 0;
@@ -407,23 +294,18 @@ public partial class StatsPanel : PanelContainer
         SetValue("net", Money(net), null, net >= 0 ? Positive : UiStyle.Red);
 
         // Headline tiles.
-        SetTile(0, Count(arrivals), ambulance > 0 ? $"{ambulance:N0} by ambulance" : "none by ambulance", Tone.Normal);
-        SetTile(1, fourHour is { } p ? $"{p * 100:0}%" : "–", departed > 0 ? $"{departed - within:N0} over 4 hours" : "nobody has left yet",
-            fourHour is not { } q ? Tone.Normal : q >= 0.95 ? Tone.Good : q >= 0.76 ? Tone.Warning : Tone.Danger);
-        SetTile(2, timeInAe is { } a ? Minutes(a) : "–", departed > 0 ? $"{departed:N0} left A&E" : string.Empty, Tone.Normal);
-        SetTile(3, toDoctor is { } b ? Minutes(b) : "–", seenByDoctor > 0 ? $"{seenByDoctor:N0} seen by a doctor" : string.Empty,
-            toDoctor is not { } w ? Tone.Normal : w >= 120 ? Tone.Danger : w >= 60 ? Tone.Warning : Tone.Normal);
-        SetTile(4, occupancy.Count > 0 ? $"{occupancy.Average * 100:0}%" : "No wards", occupancy.Count > 0 ? $"busiest {occupancy.Peak * 100:0}%" : string.Empty,
-            occupancy.Count > 0 && occupancy.Peak >= 1 ? Tone.Warning : Tone.Normal);
-        SetTile(5, Money(net), $"{Money(income)} in · {Money(-spending)} out", net >= 0 ? Tone.Good : Tone.Danger);
+        SetTile(0, onShift.Count > 0 ? $"{onShift.Average:0.#}" : "–", onShift.Count > 0 ? $"busiest {onShift.Peak:0}" : string.Empty, Tone.Normal);
+        SetTile(1, Count(hired), string.Empty, Tone.Normal);
+        SetTile(2, Count(left), string.Empty, left > 0 ? Tone.Warning : Tone.Normal);
+        SetTile(3, Money(net), $"{Money(income)} in · {Money(-spending)} out", net >= 0 ? Tone.Good : Tone.Danger);
 
         // Charts: hour by hour for the last day, day by day otherwise (all time shows the last 28 days).
         var byHour = _period == StatsPeriod.Last24Hours;
         var span = byHour ? "hour by hour" : _period == StatsPeriod.AllTime ? "day by day, last 28 days" : "day by day";
-        _arrivalsTitle.Text = $"A&E arrivals, {span}";
+        _arrivalsTitle.Text = $"Staff hired, {span}";
         _moneyTitle.Text = $"Money in less out, {span}";
         string Label(DateTime start) => byHour ? start.ToString("HH:00") : start.ToString("d MMM");
-        _arrivalsChart.SetData(history.Series(_period, now, StatKeys.Arrivals).Select(x => (Label(x.Start), x.Value)).ToList(), v => $"{v:0}");
+        _arrivalsChart.SetData(history.Series(_period, now, StatKeys.Hired).Select(x => (Label(x.Start), x.Value)).ToList(), v => $"{v:0}");
         var moneyKeys = Enum.GetValues<MoneyCategory>().Where(c => c != MoneyCategory.Cheats).Select(StatKeys.Money).ToList();
         var moneySeries = history.Series(_period, now, moneyKeys[0]).Select(x => x.Start).ToList();
         var netSeries = moneyKeys.Select(k => history.Series(_period, now, k).Select(x => x.Value).ToList()).ToList();
@@ -450,16 +332,7 @@ public partial class StatsPanel : PanelContainer
     private void Gauge(string key, GaugeReadings readings, Func<double, string> average, Func<double, string> peak) =>
         SetValue(key, readings.Count > 0 ? average(readings.Average) : "–", readings.Count > 0 ? $"average · peak {peak(readings.Peak)}" : string.Empty);
 
-    private static Color FourHourColour(double share) => share >= 0.95 ? Positive : share >= 0.76 ? UiStyle.AmberText : UiStyle.Red;
-
     private static string Count(double value) => $"{value:N0}";
-
-    private static string Share(double part, double whole) => whole > 0 ? $"{part / whole * 100:0}%" : string.Empty;
-
-    /// <summary>Seconds as "1:45".</summary>
-    private static string MinSec(double seconds) => $"{(int)(seconds / 60)}:{(int)(seconds % 60):00}";
-
-    private static string Minutes(double minutes) => ClinicalText.Duration(TimeSpan.FromMinutes(minutes));
 
     private static string Money(double amount) => amount < 0 ? $"−£{-amount:N0}" : $"£{amount:N0}";
 

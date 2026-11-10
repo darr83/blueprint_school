@@ -110,7 +110,7 @@ public partial class CheatConsole : PanelContainer
     {
         var result = _sim.RunCheat(command);
         Write($"[color=#5B6B79]> {Escape(command.Trim())}[/color]");
-        var colour = result.Succeeded ? ClinicalText.GreenHex : ClinicalText.RedHex;
+        var colour = result.Succeeded ? UiText.GreenHex : UiText.RedHex;
         Write($"[color={colour}]{Escape(result.Message)}[/color]");
         return result;
     }

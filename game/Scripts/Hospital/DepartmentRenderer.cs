@@ -55,8 +55,6 @@ public partial class DepartmentRenderer : Node2D
     private SchoolSimulation _sim = null!;
     private static SchoolSimulation? _current;
 
-    private static bool IsCriticalCare(CareSpace space) => _current?.IsCriticalCareUnit(space) == true;
-
     public void Initialise(SchoolSimulation simulation)
     {
         _sim = simulation;
@@ -113,12 +111,6 @@ public partial class DepartmentRenderer : Node2D
         {
             return;
         }
-
-        // Ambulance bay markings: one box per handover slot.
-        foreach (var slot in _sim.AmbulanceBayPatientTiles)
-        {
-            IsoDraw.FloorOutline(this, slot.X + 3, slot.Y - 1, 12, 3.6, new Color(1, 1, 1, 0.7f), 2f);
-        }
     }
 
     /// <summary>The colour of the band outside a clinical room's door, or null for rooms without one.</summary>
@@ -129,8 +121,6 @@ public partial class DepartmentRenderer : Node2D
             CareSpaceKind.Majors => new Color("#F9A825"),
             CareSpaceKind.Minors => new Color("#43A047"),
             CareSpaceKind.Triage => new Color("#7E57C2"),
-            CareSpaceKind.Ward when IsCriticalCare(space) => new Color("#5E35B1"),
-            CareSpaceKind.Ward when space.DepartmentId == SchoolSimulation.MaternityDepartmentId => new Color("#D46A9F"),
             CareSpaceKind.DeliveryRoom => new Color("#D46A9F"),
             CareSpaceKind.Ward => new Color("#1E88E5"),
             CareSpaceKind.OutreachOffice => new Color("#5E35B1"),

@@ -6,7 +6,7 @@ using Godot;
 namespace BlueprintSchool.Hospital;
 
 /// <summary>
-/// Draws the hospital site: ground tiles, the building floor, the placement grid and entrance mats.
+/// Draws the school site: ground tiles, the building floor, the placement grid and entrance mats.
 /// Walls are drawn by <see cref="WorldLayer"/> so they depth-sort with people and furniture.
 /// Geometry is built into meshes once and redrawn only when something changes.
 /// </summary>
@@ -17,7 +17,6 @@ public partial class SiteRenderer : Node2D
         [TileKind.Grass] = new Color("#6E9E57"),
         [TileKind.Paving] = new Color("#B9B5AA"),
         [TileKind.Road] = new Color("#55595E"),
-        [TileKind.AmbulanceBay] = new Color("#D9C23E"),
         [TileKind.Parking] = new Color("#6D7176"),
         [TileKind.BuildingFloor] = new Color("#E7E3DA"),
     };
@@ -166,7 +165,7 @@ public partial class SiteRenderer : Node2D
 
     private void DrawEntranceMat(Entrance entrance)
     {
-        var colour = entrance.IsAmbulanceEntrance ? new Color("#E53935") : new Color("#005EB8");
+        var colour = new Color("#1E6B47");
         var (x, y, w, l) = entrance.Side switch
         {
             WallSide.North or WallSide.South => (entrance.Tile.X, entrance.Tile.Y, entrance.WidthTiles, 1),

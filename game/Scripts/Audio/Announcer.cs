@@ -6,7 +6,7 @@ using Godot;
 namespace BlueprintSchool.Audio;
 
 /// <summary>
-/// The hospital tannoy. Announcements from the simulation queue up and play one at a time:
+/// The school PA system. Announcements from the simulation queue up and play one at a time:
 /// the ding-dong chime, then each recorded line. The Announcements bus band-limits and adds a
 /// little room echo so the voice sounds like it comes from ceiling speakers. Lines that are
 /// missing are skipped, and stale announcements are dropped rather than played late.
@@ -51,7 +51,7 @@ public partial class Announcer : Node
             return;
         }
 
-        if (announcement.Kind is AnnouncementKind.CardiacArrest or AnnouncementKind.TraumaCall && _queue.Count > 0)
+        if (false && _queue.Count > 0)
         {
             var rest = _queue.ToArray();
             _queue.Clear();

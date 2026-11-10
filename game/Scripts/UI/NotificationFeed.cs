@@ -9,7 +9,7 @@ namespace BlueprintSchool.UI;
 
 /// <summary>
 /// The notifications box in the top bar. It shows only the latest notification; hovering over it drops
-/// down the last five. Any notification about a patient can be clicked to open their record.
+/// down the last five. Any notification about a member of staff can be clicked to find them.
 /// </summary>
 public partial class NotificationFeed : PanelContainer
 {
@@ -34,10 +34,10 @@ public partial class NotificationFeed : PanelContainer
     private IDisposable? _subscription;
     private bool _dirty = true;
     private double _closeTimer;
-    private int? _latestPatient;
+    private int? _latestPerson;
 
-    /// <summary>Raised when the player clicks a notification about a patient.</summary>
-    public event Action<int>? PatientClicked;
+    /// <summary>Raised when the player clicks a notification about a member of staff.</summary>
+    public event Action<int>? PersonClicked;
 
     /// <summary>The drop-down list of the last five notifications. The HUD adds it on top of the other panels.</summary>
     public PanelContainer Dropdown { get; } = new() { Name = "NotificationList", Visible = false, MouseFilter = MouseFilterEnum.Stop };
@@ -96,9 +96,9 @@ public partial class NotificationFeed : PanelContainer
 
     public override void _GuiInput(InputEvent @event)
     {
-        if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } && _latestPatient is { } id)
+        if (@event is InputEventMouseButton { ButtonIndex: MouseButton.Left, Pressed: true } && _latestPerson is { } id)
         {
-            PatientClicked?.Invoke(id);
+            PersonClicked?.Invoke(id);
             AcceptEvent();
         }
     }
@@ -145,7 +145,7 @@ public partial class NotificationFeed : PanelContainer
     {
         var items = _sim.Notifications.Recent.Take(Shown).ToList();
         var latest = items.FirstOrDefault();
-        _latestPatient = latest?.PatientId;
+        _latestPerson = latest?.PersonId;
         _stripe.Color = latest is null ? UiStyle.Border : StripeColour(latest);
         _time.Text = latest is null ? string.Empty : $"{latest.Time:HH:mm}";
         _time.Visible = latest is not null;
@@ -178,10 +178,10 @@ public partial class NotificationFeed : PanelContainer
         row.AddChild(new ColorRect { CustomMinimumSize = new Vector2(4, 0), Color = StripeColour(n) });
 
         var text = $"{n.Time:HH:mm}  {n.Text}";
-        if (n.PatientId is { } id)
+        if (n.PersonId is { } id)
         {
-            var button = HudStyle.RowButton(text, () => PatientClicked?.Invoke(id));
-            button.TooltipText = "Open the patient's record";
+            var button = HudStyle.RowButton(text, () => PersonClicked?.Invoke(id));
+            button.TooltipText = "Show them on the map";
             row.AddChild(button);
         }
         else
@@ -198,10 +198,10 @@ public partial class NotificationFeed : PanelContainer
         return row;
     }
 
-    private static Color StripeColour(Notification n) => n.Triage is { } t ? ClinicalText.TriageColour(t) : n.Level switch
+    private static Color StripeColour(Notification n) => n.Level switch
     {
-        NotificationLevel.Critical => new Color(ClinicalText.RedHex),
-        NotificationLevel.Warning => new Color(ClinicalText.AmberHex),
+        NotificationLevel.Critical => new Color(UiText.RedHex),
+        NotificationLevel.Warning => new Color(UiText.AmberHex),
         _ => new Color("#5B8DB8"),
     };
 }

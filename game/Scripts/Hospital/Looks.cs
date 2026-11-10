@@ -1,8 +1,5 @@
 using System;
-using BlueprintSchool.Simulation.Medical;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Staff;
-using BlueprintSchool.Simulation.Transport;
 using Godot;
 
 namespace BlueprintSchool.Hospital;
@@ -11,15 +8,13 @@ namespace BlueprintSchool.Hospital;
 /// Uniforms and appearances. Every person is drawn the same way by <see cref="Figures"/> from a
 /// <see cref="PersonLook"/>; this class decides what each one looks like.
 /// <para>
-/// Staff follow common UK hospital practice, and every job has its own clear uniform: a colour, a
-/// trim and one or two pieces of kit. Nurses wear tunics that darken with seniority (sky blue,
-/// royal blue, navy with red piping, then charcoal with red epaulettes); doctors wear teal scrubs
-/// that darken from junior doctor to registrar, and consultants a shirt and tie; theatre staff
-/// wear caps and masks. Everyone clinical is bare below the elbows. When a new staff role is
-/// added, give it a look here in the same way: its own colour and trim that no other role uses.
+/// School staff dress as they would in a UK secondary school: teachers in smart office clothes
+/// (experienced teachers in a jacket), teaching assistants in a school polo shirt, site staff in
+/// hi-vis and the receptionist in a blazer. Everyone wears a lanyard. When a new staff role is
+/// added, give it a look here in the same way: something no other role wears.
 /// </para>
 /// <para>
-/// Patients and visitors are made from their id, sex and age, so each keeps one face, hair style
+/// Visitors (and, later, pupils) are made from their id, sex and age, so each keeps one face, hair style
 /// and outfit, children are child-sized and the elderly look their age.
 /// </para>
 /// </summary>
@@ -161,68 +156,40 @@ public static class Looks
         var seed = member.Id;
         var age = member.Age > 0 ? member.Age : 25 + Roll(seed, 2, 35);
 
-        // Nursing and midwifery are mostly women; the other roles are an even mix.
+        // Most school staff are women, teaching assistants and receptionists especially; site staff mostly men.
         var female = member.Role switch
         {
-            StaffRole.Midwife => Roll(seed, 3, 10) != 0,
-            StaffRole.Nurse or StaffRole.OutreachNurse or StaffRole.HealthcareAssistant or StaffRole.Receptionist => Roll(seed, 3, 10) < 7,
-            StaffRole.Porter => Roll(seed, 3, 10) < 3,
-            _ => Roll(seed, 3, 2) == 0,
+            StaffRole.TeachingAssistant or StaffRole.Receptionist => Roll(seed, 3, 10) < 8,
+            StaffRole.SiteStaff => Roll(seed, 3, 10) < 2,
+            _ => Roll(seed, 3, 10) < 6,
         };
         var who = Person(seed, female, age);
         var style = StaffHair(seed, female, age);
         var hair = style is HairStyle.Hijab or HairStyle.Turban ? ScarfColours[Roll(seed, 12, ScarfColours.Length)] : who.Hair;
-        var cap = CapColours[Roll(seed, 13, CapColours.Length)];
         var grade = member.Grade;
         bool Is(string text) => grade.Contains(text, StringComparison.OrdinalIgnoreCase);
 
-        PersonLook Tunic(string colour, string piping, string trousers) =>
-            new(new Color(colour), new Color(trousers), who.Skin, hair) { Kind = TopKind.Tunic, Trim = new Color(piping), Lanyard = true };
-        PersonLook Scrubs(string colour) =>
-            new(new Color(colour), new Color(colour).Darkened(0.1f), who.Skin, hair) { Kind = TopKind.Scrubs, Lanyard = true };
-
         var look = member.Role switch
         {
-            // Doctors: teal scrubs that darken with seniority; consultants wear a shirt and tie.
-            StaffRole.Doctor when Is("Consultant") => new PersonLook(ShirtColours[Roll(seed, 14, ShirtColours.Length)], new Color("#2E3440"), who.Skin, hair)
+            // Teachers: smart office clothes; experienced teachers in a jacket, some men in a tie.
+            StaffRole.Teacher when Is("Experienced") => new PersonLook(ShirtColours[Roll(seed, 14, ShirtColours.Length)], new Color("#2E3440"), who.Skin, hair)
             {
-                Kind = TopKind.Shirt, Tie = Pick(seed, 15, new Color("#8E2448"), new Color("#1D3A6E"), new Color("#2F7D6B")), Stethoscope = true, Lanyard = true, ShoeColour = new Color("#3A2A1E"),
+                Kind = TopKind.Shirt, Jacket = Pick(seed, 16, new Color("#2B3A55"), new Color("#4A4A52"), new Color("#5B3A2E")),
+                Tie = female ? null : Pick(seed, 15, new Color("#8E2448"), new Color("#1D3A6E"), new Color("#2F7D6B")), Lanyard = true, ShoeColour = new Color("#3A2A1E"),
             },
-            StaffRole.Doctor when Is("Registrar") => Scrubs("#1C5568") with { Stethoscope = true, Pocket = true },
-            StaffRole.Doctor when Is("Junior") => Scrubs("#63C2B4") with { Stethoscope = true, Pocket = true },
-            StaffRole.Doctor => Scrubs("#1F8A8A") with { Stethoscope = true, Pocket = true },
-
-            // Nurses: the tunic darkens with the band.
-            StaffRole.Nurse when Is("Band 8") || Is("Band 9") || Is("Matron") => Tunic("#2A2E36", "#E04848", "#1C1F26") with { FobWatch = true, Epaulettes = new Color("#E04848") },
-            StaffRole.Nurse when Is("Band 7") || Is("Senior") || Is("Sister") => Tunic("#1D3A6E", "#E04848", "#18233A") with { FobWatch = true, Pocket = true },
-            StaffRole.Nurse when Is("Band 6") => Tunic("#2F6FD0", "#FFFFFF", "#1B2C4A") with { FobWatch = true, Pocket = true },
-            StaffRole.Nurse => Tunic("#6FB1E8", "#FFFFFF", "#1B2C4A") with { FobWatch = true, Pocket = true },
-            StaffRole.OutreachNurse => Tunic("#1D3A6E", "#F2B134", "#18233A") with { FobWatch = true, Stethoscope = true, Epaulettes = new Color("#F2B134") },
-            StaffRole.HealthcareAssistant => Tunic("#A9C7B8", "#FFFFFF", "#2B3440") with { FobWatch = true, Gloves = new Color("#8FC3E6") },
-
-            // Midwives wear plum; senior and consultant midwives a deep aubergine with epaulettes.
-            StaffRole.Midwife when Is("Band 7") || Is("Band 8") => Tunic("#4A1F55", "#E7C6E0", "#24182B") with { FobWatch = true, Epaulettes = new Color("#E7C6E0") },
-            StaffRole.Midwife => Tunic("#A23B86", "#F2D5EC", "#2A1E33") with { FobWatch = true, Pocket = true },
-
-            // Theatre and procedure staff: scrubs, a cap and a mask.
-            StaffRole.Surgeon => Scrubs("#4E9C6F") with { Cap = new Color("#3E7F5A"), Mask = true, Lanyard = false, ShoeColour = new Color("#E8ECEF") },
-            StaffRole.Anaesthetist => Scrubs("#3F5FA8") with { Cap = cap, Mask = true, Stethoscope = true, ShoeColour = new Color("#2F6FD0") },
-            StaffRole.Endoscopist => Scrubs("#5A4E9C") with { Cap = new Color("#5A4E9C"), Apron = new Color("#DDEBF2") },
-
-            // Diagnostics and therapy.
-            StaffRole.Radiographer => Tunic("#F2F5F7", "#8E2448", "#8E2448") with { Badge = new Color("#F2C230") },
-            StaffRole.Sonographer => Tunic("#2F5D73", "#9ED0E6", "#1E2E3A"),
-            StaffRole.CardiacPhysiologist => Tunic("#C8453F", "#FFFFFF", "#2B2F3A"),
-            StaffRole.Neurophysiologist => Tunic("#7A5AA8", "#FFFFFF", "#2B2F3A"),
-            StaffRole.Pharmacist => Tunic("#2E7D4F", "#FFFFFF", "#2B3440") with { Pocket = true },
-            StaffRole.PlasterTechnician => Tunic("#5D6B78", "#FFFFFF", "#2B3440") with { Apron = new Color("#E9E4D6") },
-            StaffRole.Physiotherapist => new PersonLook(Colors.White, new Color("#1A3A5C"), who.Skin, hair)
+            StaffRole.Teacher => new PersonLook(ShirtColours[Roll(seed, 14, ShirtColours.Length)], new Color("#2E3440"), who.Skin, hair)
             {
-                Kind = TopKind.Polo, Epaulettes = new Color("#1A3A5C"), Lanyard = true, ShoeColour = new Color("#F2F4F7"),
+                Kind = Pick(seed, 17, TopKind.Shirt, TopKind.Jumper, TopKind.Cardigan), Lanyard = true, ShoeColour = new Color("#3A2A1E"),
             },
 
-            // Porters: a yellow polo with reflective bands and a radio on the belt.
-            StaffRole.Porter => new PersonLook(new Color("#E0B020"), new Color("#22262B"), who.Skin, hair)
+            // Teaching assistants: a school polo shirt with a lanyard.
+            StaffRole.TeachingAssistant => new PersonLook(new Color("#1E6B47"), new Color("#22262B"), who.Skin, hair)
+            {
+                Kind = TopKind.Polo, Lanyard = true, ShoeColour = new Color("#1C1F22"),
+            },
+
+            // Site staff: a hi-vis polo and a radio on the belt.
+            StaffRole.SiteStaff => new PersonLook(new Color("#E0B020"), new Color("#22262B"), who.Skin, hair)
             {
                 Kind = TopKind.Polo, HiVis = true, Radio = true, Lanyard = true, ShoeColour = new Color("#1C1F22"),
             },
@@ -242,9 +209,8 @@ public static class Looks
     public static Color UniformColour(StaffMember member) => Staff(member).Jacket ?? Staff(member).Top;
 
     /// <summary>A member of the public in their own clothes, from who they are.</summary>
-    private static PersonLook Civilian(int seed, Sex sex, int age, bool coat, bool bump)
+    private static PersonLook Civilian(int seed, bool female, int age, bool coat, bool bump)
     {
-        var female = sex == Sex.Female;
         var who = Person(seed, female, age);
         var toddler = age < 5;
         var child = age < 12;
@@ -360,128 +326,6 @@ public static class Looks
         return WithFace(look, seed, female, age, who.SkinIndex, neat: false);
     }
 
-    /// <summary>A member of the public of a given age and sex, for the art review sheets.</summary>
-    public static PersonLook Preview(int seed, Sex sex, int age, bool coat = false) => Civilian(seed, sex, age, coat, bump: false);
-
-    public static PersonLook Patient(Patient patient) => Civilian(
-        patient.Id,
-        patient.Sex,
-        patient.Age,
-        coat: Roll(patient.Id, 54, 3) == 0,
-        bump: patient.Maternity && !patient.Delivered);
-
-    /// <summary>A clinic patient in their own clothes, usually with a coat on (they have come from home).</summary>
-    public static PersonLook Outpatient(Outpatient outpatient, Appointment? appointment)
-    {
-        var seed = outpatient.AppointmentId + 100_003;
-        var sex = appointment?.Sex ?? Sex.Male;
-        var bump = sex == Sex.Female && outpatient.ClinicId.StartsWith("antenatal", StringComparison.Ordinal) && Roll(seed, 55, 3) != 0;
-        return Civilian(seed, sex, appointment?.Age ?? 40, coat: Roll(seed, 54, 3) != 0, bump);
-    }
-
-    private static readonly Color[] BabyHats =
-    {
-        new("#F4C2D7"), new("#BFDDF5"), new("#F7E3A1"), new("#C8E6C9"), new("#E1D3F2"), new("#F6D1B8"),
-    };
-
-    /// <summary>A newborn: a white cellular blanket edged in the colour of their hat, and mum's skin tone.</summary>
-    public static BabyLook Baby(Baby baby, Patient? mother)
-    {
-        var hat = BabyHats[(baby.Id * 5) % BabyHats.Length];
-        var skin = mother is not null ? Patient(mother).Skin : SkinTones[(baby.Id * 3) % SkinTones.Length];
-        return new BabyLook(hat.Lerp(new Color("#FAFAF7"), 0.7f), hat.Darkened(0.12f), hat, skin.Lightened(0.06f));
-    }
-
-    /// <summary>The blanket on a mother and baby ward bed: a soft lilac, to set the maternity unit apart.</summary>
-    public static readonly Color MaternityBlanket = new("#B79CCB");
-
-    /// <summary>Clinic patients have a soft lilac ring, so they stand apart from A&amp;E patients.</summary>
-    public static readonly Color OutpatientRing = new("#9C8AD0", 0.85f);
-
-    /// <summary>The blanket shows the patient's triage category at a glance.</summary>
-    public static Color Blanket(TriageCategory? category) => category switch
-    {
-        TriageCategory.Red => Red,
-        TriageCategory.Amber => Amber,
-        TriageCategory.Green => Green,
-        _ => new Color("#DCE3E9"),
-    };
-
-    /// <summary>The A&amp;E's blue cellular blanket. The triage colour shows on the wristband and the floor ring; the monitor shows the NEWS2 colour.</summary>
-    public static readonly Color EdBlanket = new("#8DB3D9");
-
-    /// <summary>The triage colour for a patient's wristband, or null (a plain white band) before triage.</summary>
-    public static Color? Wristband(TriageCategory? category) => category is null ? null : Blanket(category);
-
-    /// <summary>Ward patients have an ordinary hospital blanket: the ward isn't triaged.</summary>
-    public static readonly Color WardBlanket = new("#5C8FC4");
-
-    public static Color TriageRing(TriageCategory? category) => category switch
-    {
-        TriageCategory.Red => Red,
-        TriageCategory.Amber => Amber,
-        TriageCategory.Green => Green,
-        _ => new Color("#FFFFFF", 0.8f),
-    };
-}
-
-/// <summary>Vehicles on the hospital site.</summary>
-public static class Vehicles
-{
-    // The ambulance sprite sheet is baked from a 3D model by tools/ArtBaker/bake_ambulance.py:
-    // 16 headings across (0 = towards grid +x, then 22.5 degree steps), and 3 rows for the blue
-    // lights (off, left on, right on). Keep these numbers in step with that script.
-    private const string AmbulanceSheetPath = "res://Art/Vehicles/ambulance.png";
-    private const int Headings = 16;
-    private const int CellWidth = 576;
-    private const int CellHeight = 400;
-    private static readonly Vector2 Anchor = new(288, 232);
-
-    // The simulation positions an ambulance by its front; the sprite is drawn about its centre.
-    private const double FrontToCentre = 2.9;
-    private const double Length = 11.6;
-    private const double Width = 5.0;
-
-    private static Texture2D? _ambulanceSheet;
-
-    private static Texture2D AmbulanceSheet => _ambulanceSheet ??= GD.Load<Texture2D>(AmbulanceSheetPath);
-
-    public static void Ambulance(CanvasItem c, WorldLayer world, AmbulanceVehicle ambulance)
-    {
-        var (x, y) = world.Interpolated(ambulance);
-        var dir = ambulance.Facing;
-        var centre = (X: x - (dir.X * FrontToCentre), Y: y - (dir.Y * FrontToCentre));
-
-        // Soft shadow on the ground under the vehicle.
-        var len = Math.Sqrt((dir.X * dir.X) + (dir.Y * dir.Y));
-        var (fx, fy) = len < 1e-6 ? (1.0, 0.0) : (dir.X / len, dir.Y / len);
-        var (nx, ny) = (-fy, fx);
-        var (hl, hw) = ((Length / 2) + 0.2, (Width / 2) + 0.2);
-        var shadow = new[]
-        {
-            IsoDraw.ToScreen(centre.X + (fx * hl) + (nx * hw), centre.Y + (fy * hl) + (ny * hw)),
-            IsoDraw.ToScreen(centre.X + (fx * hl) - (nx * hw), centre.Y + (fy * hl) - (ny * hw)),
-            IsoDraw.ToScreen(centre.X - (fx * hl) - (nx * hw), centre.Y - (fy * hl) - (ny * hw)),
-            IsoDraw.ToScreen(centre.X - (fx * hl) + (nx * hw), centre.Y - (fy * hl) + (ny * hw)),
-        };
-        c.DrawColoredPolygon(Array.ConvertAll(shadow, p => p + new Vector2(3, 3)), new Color(0, 0, 0, 0.16f));
-
-        // Pick the baked heading that matches the facing as it looks in the current view rotation.
-        var (ox, oy) = IsoDraw.Rotate(0, 0);
-        var (rx, ry) = IsoDraw.Rotate(fx, fy);
-        var angle = Math.Atan2(ry - oy, rx - ox);
-        var column = ((int)Math.Round(angle / (Math.Tau / Headings)) % Headings + Headings) % Headings;
-
-        // Blue lights flash on an emergency run, alternating left and right.
-        var flashing = ambulance.State is AmbulanceState.Driving or AmbulanceState.WaitingForBay
-                       && world.Simulation.FindPatient(ambulance.PatientId) is { Triage: TriageCategory.Red or null };
-        var row = flashing ? 1 + ((int)(world.Time * 6) % 2) : 0;
-
-        var source = new Rect2(column * CellWidth, row * CellHeight, CellWidth, CellHeight);
-        var at = IsoDraw.ToScreen(centre.X, centre.Y) - Anchor;
-        c.DrawTextureRectRegion(AmbulanceSheet, new Rect2(at, new Vector2(CellWidth, CellHeight)), source);
-
-        var labelPos = IsoDraw.ToScreen(centre.X, centre.Y) + new Vector2(-18, -36);
-        c.DrawString(ThemeDB.FallbackFont, labelPos, ambulance.CallSign, HorizontalAlignment.Left, -1, 12, new Color("#1E5631"));
-    }
+    /// <summary>A member of the public of a given age, for the art review sheets (and visitors later on).</summary>
+    public static PersonLook Preview(int seed, bool female, int age, bool coat = false) => Civilian(seed, female, age, coat, bump: false);
 }

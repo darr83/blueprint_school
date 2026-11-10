@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using BlueprintSchool.Simulation.Agents;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Staff;
 using Godot;
 
@@ -9,7 +8,7 @@ namespace BlueprintSchool.Hospital;
 
 /// <summary>
 /// Shows where people are walking: a dotted line along each walker's route to a ring at their
-/// destination. Patients' routes are in their triage colour (grey before triage), staff routes in
+/// destination, in their uniform colour.
 /// their uniform colour. Turned on with the Routes button (R); the selected person's route always shows.
 /// </summary>
 public partial class RouteLayer : Node2D
@@ -32,7 +31,7 @@ public partial class RouteLayer : Node2D
 
         var sim = _world.Simulation;
         IEnumerable<Agent> walkers = ShowAll
-            ? sim.Patients.Where(p => _world.IsOnMap(p)).Cast<Agent>().Concat(sim.Staff)
+            ? sim.Staff.Where(s => s.IsInBuilding).Cast<Agent>()
             : _world.Selected is { } selected ? new[] { selected } : Enumerable.Empty<Agent>();
 
         foreach (var agent in walkers.Where(a => a.IsMoving))
@@ -117,8 +116,6 @@ public partial class RouteLayer : Node2D
 
     private static Color ColourOf(Agent agent) => agent switch
     {
-        Patient { Triage: { } triage } => Looks.Blanket(triage),
-        Patient => new Color("#4A5A68"),
         StaffMember member => StaffColour(member),
         _ => Colors.White,
     };

@@ -93,7 +93,7 @@ public sealed partial class SchoolSimulation
             _candidates.Add(MakeCandidate(PickGrade(StaffGrades.For(role).ToList())));
         }
 
-        // Then a second choice for the kinds of staff the hospital is short of.
+        // Then a second choice for the kinds of staff the school is short of.
         var short_ = RecommendedStaffing().Where(n => n.Short > 0).Select(n => n.Role).Distinct();
         foreach (var role in short_.Take(ExtraCandidatesForShortages))
         {

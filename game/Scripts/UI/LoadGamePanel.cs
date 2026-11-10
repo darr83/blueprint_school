@@ -48,7 +48,7 @@ public partial class LoadGamePanel : ModalPanel
         foreach (var slot in _slots)
         {
             var saved = slot.SavedAtUtc.ToLocalTime();
-            _list.AddItem($"{slot.HospitalName}  —  {slot.GameTime:ddd d MMM yyyy HH:mm}   (saved {saved:d MMM HH:mm})");
+            _list.AddItem($"{slot.SchoolName}  —  {slot.GameTime:ddd d MMM yyyy HH:mm}   (saved {saved:d MMM HH:mm})");
         }
 
         _status.Text = _slots.Count == 0 ? "No saved games yet. Save from the pause menu (Esc) while playing." : string.Empty;

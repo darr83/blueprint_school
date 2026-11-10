@@ -6,13 +6,13 @@ using BlueprintSchool.Simulation.World;
 
 namespace BlueprintSchool.Core;
 
-/// <summary>One game in progress: its clock, event bus, hospital site and the simulation running on them.</summary>
+/// <summary>One game in progress: its clock, event bus, school site and the simulation running on them.</summary>
 public sealed class GameSession
 {
-    private GameSession(GameDatabase database, string hospitalName, SaveGame? save, StartingHospital start = StartingHospital.SmallEmergency, bool unlimitedMoney = false)
+    private GameSession(GameDatabase database, string schoolName, SaveGame? save, bool unlimitedMoney = false)
     {
         Database = database;
-        HospitalName = hospitalName;
+        SchoolName = schoolName;
         Events = new EventBus();
         Clock = new SimulationClock(Events);
         Site = StarterSite.Create();
@@ -23,8 +23,8 @@ public sealed class GameSession
             InitialCamera = save.Camera;
         }
 
-        // Each clock tick advances the hospital by one game second.
-        Simulation = new SchoolSimulation(database, Clock, Events, Site, new SimulationOptions { Seed = Environment.TickCount, Start = start, UnlimitedMoney = unlimitedMoney });
+        // Each clock tick advances the school by one game second.
+        Simulation = new SchoolSimulation(database, Clock, Events, Site, new SimulationOptions { Seed = Environment.TickCount, UnlimitedMoney = unlimitedMoney });
         if (save?.Layout is { } layout)
         {
             Simulation.RestoreLayout(layout);
@@ -40,7 +40,7 @@ public sealed class GameSession
 
     public GameDatabase Database { get; }
 
-    public string HospitalName { get; }
+    public string SchoolName { get; }
 
     public EventBus Events { get; }
 
@@ -48,20 +48,20 @@ public sealed class GameSession
 
     public SiteMap Site { get; }
 
-    /// <summary>Patients, staff and everything else happening in the hospital.</summary>
+    /// <summary>Staff and everything else happening in the school.</summary>
     public SchoolSimulation Simulation { get; }
 
-    /// <summary>Camera to restore when the hospital scene opens, if the game was loaded.</summary>
+    /// <summary>Camera to restore when the school scene opens, if the game was loaded.</summary>
     public CameraState? InitialCamera { get; }
 
-    public static GameSession CreateNew(GameDatabase database, string hospitalName, StartingHospital start = StartingHospital.SmallEmergency, bool unlimitedMoney = false) =>
-        new(database, string.IsNullOrWhiteSpace(hospitalName) ? "Blueprint General Hospital" : hospitalName.Trim(), null, start, unlimitedMoney);
+    public static GameSession CreateNew(GameDatabase database, string schoolName, bool unlimitedMoney = false) =>
+        new(database, string.IsNullOrWhiteSpace(schoolName) ? "Blueprint Academy" : schoolName.Trim(), null, unlimitedMoney);
 
-    public static GameSession FromSave(GameDatabase database, SaveGame save) => new(database, save.HospitalName, save);
+    public static GameSession FromSave(GameDatabase database, SaveGame save) => new(database, save.SchoolName, save);
 
     public SaveGame CreateSave(CameraState camera) => new()
     {
-        HospitalName = HospitalName,
+        SchoolName = SchoolName,
         SavedAtUtc = DateTime.UtcNow,
         Clock = Clock.CaptureState(),
         Camera = camera,

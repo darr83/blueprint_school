@@ -25,7 +25,7 @@ public partial class MainMenu : Control
         var title = UiStyle.Heading("Blueprint School", 56);
         title.HorizontalAlignment = HorizontalAlignment.Center;
         column.AddChild(title);
-        var subtitle = UiStyle.Body("An NHS-inspired hospital management simulation", muted: true);
+        var subtitle = UiStyle.Body("A UK secondary school management simulation", muted: true);
         subtitle.HorizontalAlignment = HorizontalAlignment.Center;
         column.AddChild(subtitle);
         column.AddChild(new Control { CustomMinimumSize = new Vector2(0, 20) });
@@ -58,65 +58,18 @@ public partial class MainMenu : Control
         {
             SmokeTest.Begin(this);
         }
-        else if (!ArtGallery.Begin())
-        {
-            ArtShots.Begin(this);
-        }
     }
 
-    /// <summary>Opens the New Game panel: the hospital's name and how to start.</summary>
+    /// <summary>Opens the New Game panel: the school's name and how to start.</summary>
     public void ShowNewGame()
     {
         var panel = new ModalPanel();
         panel.Content.AddChild(UiStyle.Heading("New Game"));
-        panel.Content.AddChild(UiStyle.Body("Name your hospital"));
-        var name = new LineEdit { Text = "Blueprint General Hospital", MaxLength = 48, CustomMinimumSize = new Vector2(380, 0) };
+        panel.Content.AddChild(UiStyle.Body("Name your school"));
+        var name = new LineEdit { Text = "Blueprint Academy", MaxLength = 48, CustomMinimumSize = new Vector2(380, 0) };
         panel.Content.AddChild(name);
         panel.Content.AddChild(new Control { CustomMinimumSize = new Vector2(0, 4) });
-        panel.Content.AddChild(UiStyle.Body("How do you want to start?"));
-
-        var start = StartingHospital.SmallEmergency;
-        var choices = new VBoxContainer();
-        choices.AddThemeConstantOverride("separation", 8);
-        var group = new ButtonGroup();
-        Button Choice(string title, string detail, StartingHospital value)
-        {
-            var button = new Button
-            {
-                Text = $"{title}\n{detail}",
-                ToggleMode = true,
-                ButtonGroup = group,
-                ThemeTypeVariation = UiStyle.Secondary,
-                Alignment = HorizontalAlignment.Left,
-                AutowrapMode = TextServer.AutowrapMode.WordSmart,
-                CustomMinimumSize = new Vector2(380, 64),
-                FocusMode = FocusModeEnum.None,
-            };
-            button.Toggled += on =>
-            {
-                if (on)
-                {
-                    start = value;
-                }
-
-                // The chosen card is tinted blue.
-                var box = UiStyle.Box(on ? UiStyle.BlueTint : UiStyle.Surface, 10, on ? UiStyle.Blue : UiStyle.Border, 12);
-                foreach (var state in new[] { "normal", "hover", "pressed", "hover_pressed" })
-                {
-                    button.AddThemeStyleboxOverride(state, box);
-                }
-            };
-            return button;
-        }
-
-        var small = Choice("Small A&E with a team", "Cubicles, resus, triage, offices and 9 staff. Patients start arriving straight away.", StartingHospital.SmallEmergency);
-        var empty = Choice("Empty building", "Just the building, roads and a waiting room, with more money. Build and hire everything; A&E opens when it has a triage room, a cubicle, a nurse and a doctor.", StartingHospital.EmptyBuilding);
-        choices.AddChild(small);
-        choices.AddChild(empty);
-        panel.Content.AddChild(choices);
-        small.ButtonPressed = true;
-        empty.SetPressedNoSignal(false);
-        empty.EmitSignal(BaseButton.SignalName.Toggled, false);
+        panel.Content.AddChild(UiStyle.Body("You start with an empty building and money in the bank. Lay a corridor in from an entrance, then build rooms off it."));
 
         var unlimited = new CheckBox
         {
@@ -136,7 +89,7 @@ public partial class MainMenu : Control
 
         panel.Content.AddChild(unlimited);
 
-        void Start() => GameManager.Instance.StartNewGame(name.Text, start, unlimited.ButtonPressed);
+        void Start() => GameManager.Instance.StartNewGame(name.Text, unlimited.ButtonPressed);
         name.TextSubmitted += _ => Start();
 
         var buttons = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.End };

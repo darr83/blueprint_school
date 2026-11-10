@@ -7,24 +7,20 @@ using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Audio;
 using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Hospital;
-using BlueprintSchool.Simulation.Patients;
 using BlueprintSchool.Simulation.Simulation;
-using BlueprintSchool.Simulation.Transport;
 using BlueprintSchool.UI;
 using Godot;
 
 namespace BlueprintSchool.Audio;
 
 /// <summary>
-/// All the hospital's sound. It watches the simulation and the camera each frame and plays:
-/// background ambience; monitor beeps and alarms, X-ray and CT machines, and gibberish chatter
-/// that get louder as you zoom in near them; a siren when an ambulance is on its way; a sad
-/// sting when a patient dies; and interface sounds. It only reads the game, so it can be added
-/// or removed without changing anything else.
+/// All the school's sound. It watches the simulation and the camera each frame and plays:
+/// background ambience; chatter and footsteps that get louder as you zoom in near them;
+/// building, hiring and money cues; and interface sounds. It only reads the game, so it can be
+/// added or removed without changing anything else.
 /// </summary>
-public partial class HospitalAudio : Node2D
+public partial class SchoolAudio : Node2D
 {
-    private const int MaxMonitorVoices = 5;
     private const int MaxOneShots = 14;
     private const double FadeSpeed = 3.0;
 
@@ -34,17 +30,8 @@ public partial class HospitalAudio : Node2D
         "gibberish_angry", "gibberish_scared", "gibberish_relieved", "sigh",
     };
 
-    private static readonly string[] Sniffles = { "sneeze_1", "sneeze_2", "sniffle" };
-    private static readonly string[] Coughs = { "cough_1", "cough_2", "cough_3" };
-
     private readonly Dictionary<string, Loop> _loops = new();
     private readonly List<AudioStreamPlayer2D> _oneShots = new();
-    private readonly Dictionary<string, double> _nextBeat = new();
-    private readonly Dictionary<string, double> _nextAlarm = new();
-    private readonly Dictionary<string, (int PatientId, double NextShot)> _xrayUse = new();
-    private readonly HashSet<int> _redPatients = new();
-    private readonly HashSet<int> _sirenPlayed = new();
-    private readonly Dictionary<int, AmbulanceState> _ambulanceStates = new();
     private readonly Dictionary<string, double> _cooldowns = new();
     private readonly List<IDisposable> _subscriptions = new();
     private readonly Random _random = new();
@@ -54,7 +41,6 @@ public partial class HospitalAudio : Node2D
 
     private GameSession _session = null!;
     private WorldLayer _world = null!;
-    private AudioStreamPlayer _siren = null!;
     private double _time;
     private double _nextChatter = 3;
     private int _roomCount = -1;
@@ -68,25 +54,11 @@ public partial class HospitalAudio : Node2D
         _world = world;
         AudioSettings.Current.Apply();
 
-        _siren = new AudioStreamPlayer { Bus = AudioSettings.EffectsBus };
-        AddChild(_siren);
-
         var announcer = new Announcer();
         AddChild(announcer);
         _subscriptions.Add(session.Events.Subscribe<Announcement>(announcer.Enqueue));
-        _subscriptions.Add(session.Events.Subscribe<Announcement>(OnAnnouncement));
-        _subscriptions.Add(session.Events.Subscribe<PatientArrived>(OnPatientArrived));
-
-        _subscriptions.Add(session.Events.Subscribe<PatientLeft>(OnPatientLeft));
         _subscriptions.Add(session.Events.Subscribe<Notification>(OnNotification));
         _subscriptions.Add(session.Events.Subscribe<NewDayStarted>(_ => PlayUi("new_day", 0.6)));
-
-        // Ambulances already on the road when a save loads shouldn't all sound their sirens.
-        foreach (var ambulance in session.Simulation.Ambulances)
-        {
-            _sirenPlayed.Add(ambulance.Id);
-            _ambulanceStates[ambulance.Id] = ambulance.State;
-        }
 
         // Every button in the game clicks, and every panel whooshes open.
         GetTree().NodeAdded += OnNodeAdded;
@@ -117,10 +89,8 @@ public partial class HospitalAudio : Node2D
         var zoom = GetViewport().GetCanvasTransform().X.X;
 
         UpdateAmbience(zoom);
-        UpdateMonitors(zoom);
         UpdateRooms(zoom);
         UpdateMovement(zoom);
-        UpdateAmbulances();
         UpdateRandomVoices(zoom);
         UpdateBuildingAndMoney();
         UpdatePack2(zoom);
@@ -150,83 +120,6 @@ public partial class HospitalAudio : Node2D
         WantFlat("amb_outside", outside, AudioSettings.AmbienceBus);
     }
 
-    // ---------------------------------------------------------------- monitors
-
-    private void UpdateMonitors(float zoom)
-    {
-        var candidates = new List<(string Key, Vector2 Pos, Patient Patient, int News2, double Gain)>();
-        foreach (var monitor in _world.Monitors)
-        {
-            if (_world.ConnectedPatient(monitor) is not { } patient)
-            {
-                continue;
-            }
-
-            var news2 = patient.LatestObservations?.News2.Total ?? 0;
-            var pos = IsoDraw.ToScreen(monitor.X, monitor.Y);
-
-            // Red alarms carry further: faintly audible even zoomed out.
-            var gain = news2 >= 7
-                ? Spatial(pos, zoom, 0.3, 0.9, floor: 0.3)
-                : Spatial(pos, zoom, 0.45, 1.3);
-            if (gain > 0.02)
-            {
-                candidates.Add(($"{monitor.Space.Id}:{monitor.X:0.0}:{monitor.Y:0.0}", pos, patient, news2, gain));
-            }
-
-            // A crash call the moment someone first becomes critically unwell.
-            if (news2 >= 7 && _redPatients.Add(patient.Id))
-            {
-                if (OffCooldown("crash_call", 90))
-                {
-                    PlayAt("crash_call", pos, Math.Max(0.35, gain), AudioSettings.EffectsBus);
-                }
-            }
-            else if (news2 < 7)
-            {
-                _redPatients.Remove(patient.Id);
-            }
-        }
-
-        // Only the loudest few monitors play, alarms first, so a full ward doesn't become noise.
-        foreach (var c in candidates.OrderByDescending(c => c.News2 >= 7).ThenByDescending(c => c.Gain).Take(MaxMonitorVoices))
-        {
-            var heartRate = c.Patient.CurrentObservations().HeartRate;
-            var beatInterval = 60.0 / Math.Clamp(heartRate, 30, 180);
-            if (!_nextBeat.TryGetValue(c.Key, out var nextBeat) || nextBeat < _time - 1)
-            {
-                nextBeat = _time + (_random.NextDouble() * beatInterval);
-            }
-
-            if (_time >= nextBeat)
-            {
-                PlayAt("monitor_beep", c.Pos, c.Gain * (c.News2 >= 7 ? 0.5 : 0.7), AudioSettings.EffectsBus);
-                nextBeat += beatInterval;
-            }
-
-            _nextBeat[c.Key] = nextBeat;
-
-            if (c.News2 >= 5)
-            {
-                var red = c.News2 >= 7;
-                if (!_nextAlarm.TryGetValue(c.Key, out var nextAlarm) || nextAlarm < _time - 10)
-                {
-                    nextAlarm = _time;
-                }
-
-                if (_time >= nextAlarm)
-                {
-                    PlayAt(red ? "alarm_red" : "alarm_amber", c.Pos, c.Gain * (red ? 1.0 : 0.75), AudioSettings.EffectsBus);
-                    nextAlarm = _time + (red ? 4.0 : 6.5);
-                }
-
-                _nextAlarm[c.Key] = nextAlarm;
-            }
-        }
-    }
-
-    // ---------------------------------------------------------------- rooms
-
     private void UpdateRooms(float zoom)
     {
         var sim = _session.Simulation;
@@ -234,75 +127,9 @@ public partial class HospitalAudio : Node2D
         {
             var r = space.Rect;
             var centre = IsoDraw.ToScreen(r.X + (r.Width / 2.0), r.Y + (r.Length / 2.0));
-            var atSpot = sim.Patients.FirstOrDefault(p => !p.IsMoving && p.Tile == space.PatientSpot);
-            var kind = space.Kind.ToString();
-
-            switch (space.Kind)
+            if (space.Kind == CareSpaceKind.Waiting && sim.Staff.Any(m => !m.IsMoving && r.Contains(m.Tile)))
             {
-                case CareSpaceKind.XRay:
-                    if (atSpot is not null)
-                    {
-                        var gain = Spatial(centre, zoom, 0.4, 1.1);
-                        Want($"xray:{space.Id}", "xray_hum", centre, gain * 0.7, AudioSettings.EffectsBus);
-
-                        // An exposure shortly after each patient is positioned, then every so often.
-                        if (!_xrayUse.TryGetValue(space.Id, out var use) || use.PatientId != atSpot.Id)
-                        {
-                            use = (atSpot.Id, _time + 2.5);
-                        }
-
-                        if (_time >= use.NextShot)
-                        {
-                            PlayAt("xray_exposure", centre, gain, AudioSettings.EffectsBus);
-                            use.NextShot = _time + 12 + (_random.NextDouble() * 6);
-                        }
-
-                        _xrayUse[space.Id] = use;
-                    }
-                    else
-                    {
-                        _xrayUse.Remove(space.Id);
-                    }
-
-                    break;
-
-                case CareSpaceKind.CT when atSpot is not null:
-                    Want($"ct:{space.Id}", "ct_scanner", centre, Spatial(centre, zoom, 0.4, 1.1) * 0.8, AudioSettings.EffectsBus);
-                    break;
-
-                case CareSpaceKind.Theatre when atSpot is not null || space.OccupantId is not null:
-                    Want($"theatre:{space.Id}", "amb_theatre", centre, Spatial(centre, zoom, 0.5, 1.2) * 0.7, AudioSettings.AmbienceBus);
-                    break;
-
-                case CareSpaceKind.Ward when space.Beds.Any(b => b.OccupantId is not null):
-                    Want($"ward:{space.Id}", "amb_ward", centre, Spatial(centre, zoom, 0.5, 1.2) * 0.6, AudioSettings.AmbienceBus);
-                    break;
-
-                case CareSpaceKind.Triage when atSpot is not null:
-                    Want($"chat:{space.Id}", "chatter_triage", centre, Spatial(centre, zoom, 0.8, 1.4) * 0.7, AudioSettings.EffectsBus);
-                    break;
-
-                case CareSpaceKind.Waiting:
-                {
-                    var waiting = sim.Patients.Count(p => !p.IsMoving && r.Contains(p.Tile));
-                    if (waiting > 0)
-                    {
-                        // A few people: reception desk chat. A crowd: the waiting room murmur.
-                        var sound = waiting >= 4 ? "chatter_waiting" : "chatter_reception";
-                        Want($"chat:{space.Id}", sound, centre, Spatial(centre, zoom, 0.8, 1.4) * 0.65, AudioSettings.EffectsBus);
-                    }
-
-                    break;
-                }
-
-                default:
-                    // A reception room, when the game has one.
-                    if (kind.Contains("Reception", StringComparison.Ordinal) && sim.Patients.Any(p => r.Contains(p.Tile)))
-                    {
-                        Want($"chat:{space.Id}", "chatter_reception", centre, Spatial(centre, zoom, 0.8, 1.4) * 0.7, AudioSettings.EffectsBus);
-                    }
-
-                    break;
+                Want($"chat:{space.Id}", "chatter_reception", centre, Spatial(centre, zoom, 0.8, 1.4) * 0.6, AudioSettings.EffectsBus);
             }
         }
     }
@@ -317,18 +144,6 @@ public partial class HospitalAudio : Node2D
         }
 
         var sim = _session.Simulation;
-        var rolling = sim.Patients
-            .Where(p => p.IsMoving && _world.IsOnMap(p) && (_world.InWheelchair(p) || _world.OnTrolley(p)))
-            .Select(p => (Patient: p, Pos: _world.FootPosition(p)))
-            .Select(x => (x.Patient, x.Pos, Gain: Spatial(x.Pos, zoom, 1.0, 1.6)))
-            .Where(x => x.Gain > 0.05)
-            .OrderByDescending(x => x.Gain)
-            .Take(2);
-        foreach (var (patient, pos, gain) in rolling)
-        {
-            Want($"roll:{patient.Id}", _world.InWheelchair(patient) ? "wheelchair" : "trolley", pos, gain * 0.5, AudioSettings.EffectsBus);
-        }
-
         var walker = sim.Staff
             .Where(s => s.IsMoving)
             .Select(s => (Staff: s, Pos: _world.FootPosition(s)))
@@ -341,57 +156,6 @@ public partial class HospitalAudio : Node2D
             Want("footsteps", "footsteps", walker.Pos, walker.Gain * 0.35, AudioSettings.EffectsBus);
         }
     }
-
-    // ---------------------------------------------------------------- ambulances
-
-    private void UpdateAmbulances()
-    {
-        foreach (var ambulance in _session.Simulation.Ambulances)
-        {
-            // A siren for each ambulance on its way in with a patient.
-            if (ambulance.Purpose == AmbulancePurpose.Arrival && ambulance.State == AmbulanceState.Driving && _sirenPlayed.Add(ambulance.Id))
-            {
-                if (!_siren.Playing && SoundLibrary.Get("siren") is { } siren)
-                {
-                    _siren.Stream = siren;
-                    _siren.VolumeDb = (float)SoundFalloff.ToDecibels(0.55);
-                    _siren.Play();
-                    if (LogSounds)
-                    {
-                        GD.Print("[sound] siren");
-                    }
-                }
-            }
-
-            _ambulanceStates.TryGetValue(ambulance.Id, out var previous);
-            if (ambulance.State == AmbulanceState.AtBay && previous != AmbulanceState.AtBay)
-            {
-                var pos = _world.FootPosition(ambulance);
-                var zoom = GetViewport().GetCanvasTransform().X.X;
-                var gain = Spatial(pos, zoom, 0.35, 1.0);
-                PlayAt("reversing_beep", pos, gain * 0.5, AudioSettings.EffectsBus);
-                PlayAt("ambulance_arrive", pos, gain * 0.7, AudioSettings.EffectsBus, delay: 2.5);
-                if (ambulance.Purpose == AmbulancePurpose.Arrival)
-                {
-                    PlayAt("ambulance_doors", pos, gain * 0.8, AudioSettings.EffectsBus, delay: 6);
-                }
-            }
-            else if (ambulance.State == AmbulanceState.Departing && previous is AmbulanceState.AtBay)
-            {
-                var pos = _world.FootPosition(ambulance);
-                var gain = Spatial(pos, GetViewport().GetCanvasTransform().X.X, 0.35, 1.0);
-                PlayAt("ambulance_leave", pos, gain * 0.6, AudioSettings.EffectsBus);
-                if (ambulance.Purpose == AmbulancePurpose.Transfer && OffCooldown("siren_away", 30))
-                {
-                    PlayFlat("siren_away", 0.4, AudioSettings.EffectsBus, delay: 3);
-                }
-            }
-
-            _ambulanceStates[ambulance.Id] = ambulance.State;
-        }
-    }
-
-    // ---------------------------------------------------------------- voices
 
     private void UpdateRandomVoices(float zoom)
     {
@@ -406,43 +170,18 @@ public partial class HospitalAudio : Node2D
             return;
         }
 
-        var nearby = _session.Simulation.Patients
-            .Where(_world.IsOnMap)
-            .Select(p => (Patient: p, Pos: _world.FootPosition(p)))
-            .Select(x => (x.Patient, x.Pos, Gain: Spatial(x.Pos, zoom, 0.9, 1.5)))
+        var nearby = _session.Simulation.Staff
+            .Where(m => m.IsInBuilding && _world.OnViewFloor(m))
+            .Select(m => (Pos: _world.FootPosition(m), Gain: Spatial(_world.FootPosition(m), zoom, 0.9, 1.5)))
             .Where(x => x.Gain > 0.15)
             .ToList();
-        if (nearby.Count == 0)
+        if (nearby.Count == 0 || _random.NextDouble() < 0.5)
         {
             return;
         }
 
-        var (patient, pos, gain) = nearby[_random.Next(nearby.Count)];
-        var news2 = patient.LatestObservations?.News2.Total ?? 0;
-        string? sound;
-        if (patient.Age < 2)
-        {
-            sound = "baby_cry";
-        }
-        else if (_world.IsLying(patient))
-        {
-            sound = news2 >= 5 && _random.NextDouble() < 0.5 ? "groan" : null;
-        }
-        else
-        {
-            var roll = _random.NextDouble();
-            sound = roll < 0.3 ? Coughs[_random.Next(Coughs.Length)]
-                : roll < 0.42 ? Sniffles[_random.Next(Sniffles.Length)]
-                : roll < 0.8 ? (patient.Age < 6 ? "toddler_cry" : patient.Age < 12 ? "gibberish_child" : news2 >= 5 ? "gibberish_ouch" : Gibberish[_random.Next(Gibberish.Length)])
-                : roll < 0.88 && IsVomiting(patient) ? "retch"
-                : roll < 0.95 && IsDrunkHour() && patient.Age is >= 18 and < 50 ? "drunk_shout"
-                : null;
-        }
-
-        if (sound is not null)
-        {
-            PlayAt(sound, pos, gain * 0.6, AudioSettings.EffectsBus);
-        }
+        var (pos, gain) = nearby[_random.Next(nearby.Count)];
+        PlayAt(Gibberish[_random.Next(Gibberish.Length)], pos, gain * 0.5, AudioSettings.EffectsBus);
     }
 
     // ---------------------------------------------------------------- building, staff, money
@@ -500,41 +239,6 @@ public partial class HospitalAudio : Node2D
     }
 
     // ---------------------------------------------------------------- events
-
-    private void OnPatientLeft(PatientLeft e)
-    {
-        switch (e.Outcome)
-        {
-            case PatientOutcome.Died:
-            {
-                // The monitor flatlines if they were on one, then a gentle sting.
-                var monitor = _world.Monitors.FirstOrDefault(m => _world.ConnectedPatient(m)?.Id == e.Patient.Id);
-                if (monitor is not null)
-                {
-                    var pos = IsoDraw.ToScreen(monitor.X, monitor.Y);
-                    var zoom = GetViewport().GetCanvasTransform().X.X;
-                    PlayAt("flatline", pos, Spatial(pos, zoom, 0.3, 1.0, floor: 0.3) * 0.6, AudioSettings.EffectsBus, maxSeconds: 2.5);
-                }
-
-                PlayFlat("death_sting", 0.9, AudioSettings.MusicBus, delay: monitor is null ? 0 : 1.5);
-                if (monitor is not null)
-                {
-                    // Relatives at the bedside.
-                    var pos = IsoDraw.ToScreen(monitor.X, monitor.Y);
-                    PlayAt("adult_cry", pos, Spatial(pos, GetViewport().GetCanvasTransform().X.X, 0.6, 1.3) * 0.5, AudioSettings.EffectsBus, delay: 9);
-                }
-                break;
-            }
-
-            case PatientOutcome.Discharged when OffCooldown("discharged", 2.5):
-                PlayUi("discharged", 0.35);
-                break;
-
-            case PatientOutcome.Transferred when OffCooldown("transferred", 2.5):
-                PlayUi("transferred", 0.4);
-                break;
-        }
-    }
 
     private void OnNotification(Notification n)
     {

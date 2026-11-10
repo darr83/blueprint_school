@@ -276,24 +276,5 @@ public partial class RecruitmentPanel : PanelContainer
 
     private static string Capitalise(string text) => text.Length == 0 ? text : char.ToUpperInvariant(text[0]) + text[1..];
 
-    public static Color RoleColour(StaffRole role) => role switch
-    {
-        StaffRole.Doctor => new Color("#1F8A8A"),
-        StaffRole.Nurse => new Color("#1F5FBF"),
-        StaffRole.Radiographer => new Color("#8E2448"),
-        StaffRole.Surgeon => new Color("#00897B"),
-        StaffRole.Pharmacist => new Color("#43A047"),
-        StaffRole.CardiacPhysiologist => new Color("#7A2E4A"),
-        StaffRole.Neurophysiologist => new Color("#5A3D7A"),
-        StaffRole.Sonographer => new Color("#2F5D73"),
-        StaffRole.Midwife => new Color("#8A2D6E"),
-        StaffRole.Endoscopist => new Color("#2C4F7C"),
-        StaffRole.PlasterTechnician => new Color("#5D6B78"),
-        StaffRole.Physiotherapist => new Color("#1A5E8A"),
-        StaffRole.Anaesthetist => new Color("#2E4A9E"),
-        StaffRole.OutreachNurse => new Color("#B23A48"),
-        StaffRole.Porter => new Color("#3C6E47"),
-        StaffRole.HealthcareAssistant => new Color("#6B7782"),
-        _ => new Color("#6E5A8C"),
-    };
+    public static Color RoleColour(StaffRole role) => RosterPanel.RoleColour(role);
 }

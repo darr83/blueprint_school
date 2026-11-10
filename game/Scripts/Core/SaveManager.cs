@@ -49,7 +49,7 @@ public static class SaveManager
             try
             {
                 var save = Read(slot);
-                slots.Add(new SaveSlotInfo(slot, save.HospitalName, save.Clock.Now, save.SavedAtUtc));
+                slots.Add(new SaveSlotInfo(slot, save.SchoolName, save.Clock.Now, save.SavedAtUtc));
             }
             catch (Exception ex)
             {

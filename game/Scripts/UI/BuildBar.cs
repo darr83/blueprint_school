@@ -13,7 +13,7 @@ namespace BlueprintSchool.UI;
 
 /// <summary>
 /// The build menu: a bar of icons along the bottom of the screen in Build mode. The first icon is
-/// the hospital building (extensions, floors, corridors, lifts and stairs); then one icon per
+/// the school building (extensions, floors, corridors, lifts and stairs); then one icon per
 /// department and shared service. Clicking an icon pops up a row of its rooms; hovering a room shows
 /// everything about it, and clicking it starts the drag-to-build tool. A locked department's pop-up
 /// offers to open it. The icons and their rooms come from Data/BuildMenu/build_menu.json.
@@ -320,7 +320,7 @@ public partial class BuildBar : Control
             banner.AddThemeStyleboxOverride("panel", bannerBox);
             var line = new HBoxContainer();
             line.AddThemeConstantOverride("separation", 12);
-            var text = new Label { Text = $"{department.Name} is closed. Open it to build its rooms and treat its patients.", SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center };
+            var text = new Label { Text = $"{department.Name} is closed. Open it to build its rooms.", SizeFlagsHorizontal = SizeFlags.ExpandFill, VerticalAlignment = VerticalAlignment.Center };
             text.AddThemeColorOverride("font_color", UiStyle.AmberText);
             text.AddThemeFontSizeOverride("font_size", 14);
             line.AddChild(text);
@@ -538,9 +538,6 @@ public partial class BuildBar : Control
             case BuildMenu.WaitingChairs:
                 _tool.StartChairs();
                 break;
-            case BuildMenu.ResusTrolleys:
-                _tool.StartTrolleys();
-                break;
             case BuildMenu.WaitingDesk:
                 _tool.StartDesk();
                 break;
@@ -618,9 +615,6 @@ public partial class BuildBar : Control
                 {
                     BuildMode.Chair => $"Click to place a chair, drag for a row · facing {_tool.FacingFor(_tool.Hover).ToString().ToLowerInvariant()} · Z turns",
                     BuildMode.Desk => $"Click to place the reception desk · Z turns",
-                    BuildMode.Trolley when _tool.CarriedTrolley is null && _tool.HoveredTrolley is not null => "Click to pick this trolley up and move it" + (_tool.HoveredTrolley.HomeRoomId is null ? " · X sells it" : string.Empty),
-                    BuildMode.Trolley when _tool.CarriedTrolley is not null => "Click to keep the trolley here",
-                    BuildMode.Trolley => "Click to buy a resus trolley and keep it here",
                     BuildMode.Door when _tool.RemovingDoor => "Click to take this door out",
                     BuildMode.Door => "Click to put a door here",
                     _ => _tool.MovingId is null ? "Release to build" : "Release to rebuild here",
@@ -657,7 +651,6 @@ public partial class BuildBar : Control
             {
                 BuildMode.Chair => "Click a waiting room or corridor tile for a chair, drag for a row · Z turns · Right click or Esc stops",
                 BuildMode.Desk => "Click inside a waiting room to place its reception desk · Z turns · Right click or Esc stops",
-                BuildMode.Trolley => "Click a resus trolley to move it, or empty floor to buy one · Right click or Esc stops",
                 BuildMode.Door => "Click a waiting room wall: on the front path for the entrance, on a corridor for the way through · Right click or Esc stops",
                 _ => "Drag on the floor from corner to corner · Right click or Esc stops",
             }
@@ -713,7 +706,6 @@ public partial class BuildBar : Control
         BuildMenu.ExtendBuilding => "Extend building",
         BuildMenu.AddFloor => "Add a floor",
         BuildMenu.WaitingChairs => "Waiting chairs",
-        BuildMenu.ResusTrolleys => "Resus trolleys",
         BuildMenu.WaitingDesk => "Reception desk",
         BuildMenu.WaitingDoors => "Waiting room doors",
         _ => _sim.Database.RoomTemplates.TryGetValue(item, out var t) ? t.Name : item,
@@ -751,23 +743,15 @@ public partial class BuildBar : Control
             case BuildMenu.WaitingChairs:
             {
                 var inRooms = _sim.Chairs.Count(c => _sim.Spaces.Any(r => r.Kind == CareSpaceKind.Waiting && r.Rect.Contains(c.Tile)));
-                lines.Add("Place chairs in a waiting room or anywhere along a corridor. Patients waiting for triage sit in the waiting room; everyone else sits on the free chair nearest where they are going, or stands if there isn't one. Drag for a row, Z turns them, and pick a colour below.");
+                lines.Add("Place chairs in a waiting room or anywhere along a corridor. Visitors waiting at reception sit in the waiting room; anyone else waiting sits on the free chair nearest where they are going. Drag for a row, Z turns them, and pick a colour below.");
                 lines.Add($"{muted}Cost[/color]  £{_sim.ChairCost:N0} each; turning or recolouring a placed chair is free");
                 lines.Add($"{muted}Placed[/color]  {_sim.Chairs.Count} ({inRooms} in waiting rooms, {_sim.Chairs.Count - inRooms} in corridors)");
                 break;
             }
 
-            case BuildMenu.ResusTrolleys:
-            {
-                lines.Add("The crash trolley: defibrillator, drugs and airway kit. Every resus bay and ward comes with one. In a cardiac arrest the nearest is pushed to the bed, so keep them close to where patients are. Click one to move it (free) or click empty floor to buy another.");
-                lines.Add($"{muted}Cost[/color]  £{_sim.ResusTrolleyCost:N0} each; moving one is free; X sells one you bought for half price");
-                lines.Add($"{muted}In the hospital[/color]  {_sim.ResusTrolleys.Count}");
-                break;
-            }
-
             case BuildMenu.WaitingDesk:
             {
-                lines.Add("Every waiting room needs a reception desk. The receptionist sits behind it and patients queue in front. Z turns it; placing it again moves it for free.");
+                lines.Add("Every waiting room needs a reception desk. The receptionist sits behind it and visitors queue in front. Z turns it; placing it again moves it for free.");
                 lines.Add($"{muted}Cost[/color]  £{_sim.ReceptionDeskCost:N0}");
                 lines.Add($"{muted}Size[/color]  2.5 m long, with a queue of up to {WaitingRoomLayout.MaxQueue} in front");
                 break;
@@ -775,7 +759,7 @@ public partial class BuildBar : Control
 
             case BuildMenu.WaitingDoors:
             {
-                lines.Add("A waiting room needs an entrance door on the front path (the blue mat outside the main entrance) and a door onto a corridor so patients can go through to be seen. Click a door again to take it out.");
+                lines.Add("A waiting room needs an entrance door on the front path (the green mat outside the main entrance) and a door onto a corridor so visitors can go through into the school. Click a door again to take it out.");
                 lines.Add($"{muted}Cost[/color]  £{SchoolSimulation.EntranceDoorCost:N0} for the entrance, £{SchoolSimulation.InnerDoorCost:N0} for an inner door; 2 m wide, up to {SchoolSimulation.MaxWaitingDoors} per room");
                 if (_sim.MainWaitingRoom is { } room)
                 {
@@ -795,7 +779,7 @@ public partial class BuildBar : Control
                 lines.Add(t.Description);
                 if (t.IsCorridor)
                 {
-                    lines.Add($"{muted}Size[/color]  any, at least {t.MinWidthM:0.#} m wide (2.5 m in clinical areas; 4 m lets two trolleys pass)");
+                    lines.Add($"{muted}Size[/color]  any, at least {t.MinWidthM:0.#} m wide (busy school corridors want 3 m or more)");
                     lines.Add($"{muted}Cost[/color]  £{t.CostPerSquareMetre:N0} per m² of new floor; floor that is already corridor is free");
                     lines.Add($"{muted}Rule[/color]  must touch or cross another corridor or an entrance");
                     break;

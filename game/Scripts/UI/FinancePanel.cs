@@ -1,13 +1,12 @@
 using System.Linq;
 using System.Text;
-using BlueprintSchool.Simulation.Medical;
 using BlueprintSchool.Simulation.Simulation;
 using Godot;
 
 namespace BlueprintSchool.UI;
 
 /// <summary>
-/// The hospital's money: today's and recent days' income and spending by category, what the hospital
+/// The school's money: today's and recent days' income and spending by category, what the school
 /// costs to run each day, and what it is paid for each patient.
 /// </summary>
 public partial class FinancePanel : PanelContainer
@@ -63,7 +62,7 @@ public partial class FinancePanel : PanelContainer
     private void Refresh()
     {
         var sb = new StringBuilder();
-        var balanceHex = _sim.Balance < 0 ? ClinicalText.RedHex : ClinicalText.GreenHex;
+        var balanceHex = _sim.Balance < 0 ? UiText.RedHex : UiText.GreenHex;
         sb.Append($"Balance [b][color={balanceHex}]£{_sim.Balance:N0}[/color][/b]\n\n");
 
         var days = _sim.Accounts.ToList();
@@ -99,10 +98,7 @@ public partial class FinancePanel : PanelContainer
         sb.Append($"Staff wages  £{_sim.StaffCostPerDay:N0}  ({_sim.Staff.Count(s => s.Shift == Simulation.Staff.StaffShift.Day)} on days, {_sim.Staff.Count(s => s.Shift == Simulation.Staff.StaffShift.Night)} on nights; each hire covers one 12-hour shift)\n");
         sb.Append($"Building upkeep  £{_sim.UpkeepPerDay:N0}  ({_sim.MainBuilding.AreaSquareMetres:N0} m²)\n\n");
 
-        sb.Append("[color=#5B6B79]Paid for each patient[/color]\n");
-        sb.Append($"A&E attendance  Red £{SchoolSimulation.AttendanceTariff[TriageCategory.Red]}, Amber £{SchoolSimulation.AttendanceTariff[TriageCategory.Amber]}, Green £{SchoolSimulation.AttendanceTariff[TriageCategory.Green]}\n");
-        sb.Append($"Ward admission  £{SchoolSimulation.AdmissionTariff:N0} + £{SchoolSimulation.BedDayTariff} a night\n");
-        sb.Append("[color=#5B6B79]Patients who leave without being seen earn nothing. Tests and medicines are paid for as they are used.[/color]");
+        sb.Append("[color=#5B6B79]School funding comes with the pupils, in a later update.[/color]");
         _text.Text = sb.ToString();
     }
 
@@ -111,25 +107,18 @@ public partial class FinancePanel : PanelContainer
 
     private static string Money(long amount) => amount switch
     {
-        > 0 => $"[color={ClinicalText.GreenHex}]+{amount:N0}[/color]",
+        > 0 => $"[color={UiText.GreenHex}]+{amount:N0}[/color]",
         < 0 => $"[color=#C4373D]{amount:N0}[/color]",
         _ => "[color=#5B6B79]–[/color]",
     };
 
     internal static string CategoryName(MoneyCategory category) => category switch
     {
-        MoneyCategory.Attendances => "A&E patients",
-        MoneyCategory.Admissions => "Ward patients",
+        MoneyCategory.Funding => "Funding",
         MoneyCategory.Staff => "Staff wages",
-        MoneyCategory.Tests => "Tests",
-        MoneyCategory.Medicines => "Medicines",
         MoneyCategory.Upkeep => "Upkeep",
         MoneyCategory.Construction => "Building work",
-        MoneyCategory.Operations => "Operations",
-        MoneyCategory.Clinics => "Clinics",
-        MoneyCategory.Catering => "Cafe and vending",
-        MoneyCategory.Maternity => "Maternity",
-        MoneyCategory.Prescriptions => "Prescriptions",
+        MoneyCategory.Catering => "Canteen and vending",
         MoneyCategory.Cheats => "Cheats",
         _ => category.ToString(),
     };

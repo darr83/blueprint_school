@@ -11,11 +11,9 @@ using Godot;
 namespace BlueprintSchool.UI;
 
 /// <summary>
-/// In-game heads-up display in the "Clinical light" style. Top bar: hospital, clock and speed, balance
-/// the latest notification (hover for the last five) and menu. Left: navigation (board, build, patients,
-/// staff, finances, routes, grid). Along the top of the map: the headline A&amp;E figures. Left column: the
-/// A&amp;E board. Right: a docked
-/// card for the selected patient, member of staff or room, or the open list. Bottom right: zoom and rotate.
+/// In-game heads-up display. Top bar: school, clock and speed, balance, the latest notification
+/// (hover for the last five) and menu. Left: navigation (build, staff, finances, routes, grid). Right: a docked
+/// card for the selected member of staff or room, or the open list. Bottom right: zoom and rotate.
 /// </summary>
 public partial class MainHUD : CanvasLayer
 {
@@ -31,13 +29,11 @@ public partial class MainHUD : CanvasLayer
     private readonly Button _balanceButton = new() { FocusMode = Control.FocusModeEnum.None };
     private readonly Dictionary<SimulationSpeed, Button> _speedButtons = new();
     private readonly Dictionary<string, Button> _nav = new();
-    private readonly VBoxContainer _left = new() { MouseFilter = Control.MouseFilterEnum.Ignore };
     private readonly VBoxContainer _mapControls = new();
     private GameSession _session = null!;
     private IDisposable? _speedSubscription;
     private bool _routesShown;
     private bool _gridShown;
-    private bool _rosterShowsStaff;
 
     /// <summary>Raised when the player clicks the grid toggle.</summary>
     public event Action? GridToggled;
@@ -79,11 +75,8 @@ public partial class MainHUD : CanvasLayer
     /// <summary>Where the selected person is in the world and their name, for the tag above their head.</summary>
     public Func<(Vector2 World, string Name)?>? SelectionAnchor { get; set; }
 
-    public DepartmentDashboard Dashboard { get; } = new() { Name = "Dashboard" };
-
     public NotificationFeed Feed { get; } = new() { Name = "Notifications" };
 
-    public PatientRecordPanel Record { get; } = new() { Name = "PatientRecord", Visible = false };
 
     public StaffPanel StaffInfo { get; } = new() { Name = "StaffInfo", Visible = false };
 
@@ -107,14 +100,10 @@ public partial class MainHUD : CanvasLayer
 
     public RecruitmentPanel Recruitment { get; } = new() { Name = "Recruitment", Visible = false };
 
-    /// <summary>The outpatient clinics' calendars.</summary>
-    public ClinicsPanel Clinics { get; } = new() { Name = "Clinics", Visible = false };
 
     /// <summary>A bed (play mode) or a piece of furniture or equipment (build mode).</summary>
     public ItemPanel ItemInfo { get; } = new() { Name = "ItemInfo", Visible = false };
 
-    /// <summary>The crash call banner and crash team panel, under the top bar while a cardiac arrest is going on.</summary>
-    public CrashPanel Crash { get; } = new() { Name = "CrashPanel" };
 
     /// <summary>The cheat command line, opened with Ctrl+C.</summary>
     public CheatConsole Cheats { get; } = new() { Name = "CheatConsole", Visible = false };
@@ -141,10 +130,7 @@ public partial class MainHUD : CanvasLayer
 
     private PanelContainer? _hoverPanel;
 
-    /// <summary>True while the A&amp;E board column is showing.</summary>
-    public bool BoardShown => _left.Visible;
-
-    private IEnumerable<Control> RightPanels => new Control[] { Record, StaffInfo, Roster, RoomInfo, Decorate, ItemInfo, Finances, Recruitment, Clinics };
+    private IEnumerable<Control> RightPanels => new Control[] { StaffInfo, Roster, RoomInfo, Decorate, ItemInfo, Finances, Recruitment };
 
     /// <summary>Highlights the Routes button while everyone's routes are shown.</summary>
     public void SetRoutesShown(bool shown) => _routesShown = shown;
@@ -155,7 +141,7 @@ public partial class MainHUD : CanvasLayer
     /// <summary>Closes every right-hand panel.</summary>
     public void HideRightPanels()
     {
-        Record.Visible = StaffInfo.Visible = Roster.Visible = Finances.Visible = Recruitment.Visible = Clinics.Visible = Rota.Visible = StatsScreen.Visible = false;
+        StaffInfo.Visible = Roster.Visible = Finances.Visible = Recruitment.Visible = Rota.Visible = StatsScreen.Visible = false;
         RoomInfo.Close();
         Decorate.Close();
         ItemInfo.Close();
@@ -167,17 +153,6 @@ public partial class MainHUD : CanvasLayer
         var show = !Finances.Visible;
         HideRightPanels();
         Finances.Visible = show;
-    }
-
-    /// <summary>Opens the clinic calendars, or closes them.</summary>
-    public void ToggleClinics()
-    {
-        var show = !Clinics.Visible;
-        HideRightPanels();
-        if (show)
-        {
-            Clinics.ShowToday();
-        }
     }
 
     /// <summary>Opens recruitment, or closes it.</summary>
@@ -213,14 +188,12 @@ public partial class MainHUD : CanvasLayer
         StaffInfo.Show(member);
     }
 
-    /// <summary>Opens the patient or staff list, or closes it if that tab is already showing.</summary>
-    public void ToggleRoster(bool staff)
+    /// <summary>Opens the staff list, or closes it.</summary>
+    public void ToggleRoster()
     {
-        var show = !(Roster.Visible && _rosterShowsStaff == staff);
+        var show = !Roster.Visible;
         HideRightPanels();
         Roster.Visible = show;
-        _rosterShowsStaff = staff;
-        Roster.ShowTab(staff);
     }
 
     /// <summary>Opens the staff rota, or closes it.</summary>
@@ -243,9 +216,6 @@ public partial class MainHUD : CanvasLayer
         StatsScreen.Visible = show;
     }
 
-    /// <summary>Shows or hides the A&amp;E board.</summary>
-    public void ToggleBoard() => _left.Visible = !_left.Visible;
-
     public void Initialise(GameSession session, BlueprintSchool.Hospital.BuildTool tool)
     {
         _session = session;
@@ -264,19 +234,6 @@ public partial class MainHUD : CanvasLayer
         root.AddChild(BuildMapControls());
 
         var sim = session.Simulation;
-        _left.OffsetLeft = NavWidth + Gap;
-        _left.OffsetTop = TopBarHeight + Gap;
-        _left.AnchorBottom = 1;
-        _left.OffsetBottom = -Gap;
-        _left.AddThemeConstantOverride("separation", 10);
-        Dashboard.Initialise(sim);
-        Dashboard.CustomMinimumSize = new Vector2(330, 0);
-        _left.AddChild(Dashboard);
-        root.AddChild(_left);
-
-        Record.Initialise(sim);
-        DockRight(Record, 420);
-        root.AddChild(Record);
         StaffInfo.Initialise(sim);
         DockRight(StaffInfo, 400);
         root.AddChild(StaffInfo);
@@ -295,9 +252,6 @@ public partial class MainHUD : CanvasLayer
         Recruitment.Initialise(sim);
         DockRight(Recruitment, 440);
         root.AddChild(Recruitment);
-        Clinics.Initialise(sim);
-        DockRight(Clinics, 480);
-        root.AddChild(Clinics);
         ItemInfo.Initialise(sim);
         DockRight(ItemInfo, 360);
         ItemInfo.AnchorBottom = 0;
@@ -327,12 +281,6 @@ public partial class MainHUD : CanvasLayer
         root.AddChild(Build);
 
         // The crash call banner hangs under the middle of the top bar.
-        Crash.Initialise(sim);
-        Crash.AnchorLeft = Crash.AnchorRight = 0.5f;
-        Crash.OffsetLeft = -280;
-        Crash.OffsetRight = 280;
-        Crash.OffsetTop = TopBarHeight + Gap;
-        root.AddChild(Crash);
 
         // The cheat console sits on top of everything, centred under the top bar.
         Cheats.Initialise(sim);
@@ -360,7 +308,6 @@ public partial class MainHUD : CanvasLayer
 
         // In Build mode everything docked to the bottom of the screen moves up above the build bar.
         var reserve = Build.Visible ? BuildBar.Reserve : 0;
-        _left.OffsetBottom = -Gap - reserve;
         foreach (var panel in RightPanels.Append(Rota).Append(StatsScreen).Where(p => p != ItemInfo))
         {
             panel.OffsetBottom = -Gap - reserve;
@@ -432,7 +379,7 @@ public partial class MainHUD : CanvasLayer
         brand.AddChild(logo);
         var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         names.AddThemeConstantOverride("separation", -2);
-        var name = new Label { Text = _session.HospitalName };
+        var name = new Label { Text = _session.SchoolName };
         name.AddThemeFontSizeOverride("font_size", 16);
         names.AddChild(name);
         names.AddChild(_dateLabel);
@@ -501,7 +448,7 @@ public partial class MainHUD : CanvasLayer
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 2);
         pill.AddChild(row);
-        AddModeButton(row, "Play", BlueprintSchool.Hospital.GameMode.Play, "Play mode: click patients, staff and beds");
+        AddModeButton(row, "Play", BlueprintSchool.Hospital.GameMode.Play, "Play mode: click staff and rooms");
         AddModeButton(row, "Build", BlueprintSchool.Hospital.GameMode.Build, "Build mode: build, and click rooms and items (B)");
         return pill;
     }
@@ -582,16 +529,13 @@ public partial class MainHUD : CanvasLayer
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", 6);
         nav.AddChild(column);
-        column.AddChild(NavButton("Hospital", NavIcon.Kind.Hospital, ToggleBoard, "Show or hide the A&E board"));
         column.AddChild(NavButton("Build", NavIcon.Kind.Build, () => ModeRequested?.Invoke(Mode == BlueprintSchool.Hospital.GameMode.Build ? BlueprintSchool.Hospital.GameMode.Play : BlueprintSchool.Hospital.GameMode.Build), "Build mode: build rooms and corridors, and pick rooms and items (B)"));
-        column.AddChild(NavButton("Patients", NavIcon.Kind.Patients, () => ToggleRoster(false), "Everyone in A&E, sickest first (P)"));
         column.AddChild(NavButton("Staff", NavIcon.Kind.Staff, ToggleRota, "Staff rota: day and night teams, breaks and who works where (T)"));
-        column.AddChild(NavButton("Clinics", NavIcon.Kind.Clinics, ToggleClinics, "Outpatient clinics: today's and tomorrow's booked patients (C)"));
         column.AddChild(NavButton("Hire", NavIcon.Kind.Hire, ToggleRecruitment, "Recruitment: hire and let go of staff (H)"));
         column.AddChild(NavButton("Finances", NavIcon.Kind.Finances, ToggleFinances, "Money in and out (F)"));
-        column.AddChild(NavButton("Stats", NavIcon.Kind.Stats, ToggleStats, "Hospital stats: the last 24 hours, 7 days, 28 days and all time (I)"));
+        column.AddChild(NavButton("Stats", NavIcon.Kind.Stats, ToggleStats, "School stats: the last 24 hours, 7 days, 28 days and all time (I)"));
         column.AddChild(new Control { SizeFlagsVertical = Control.SizeFlags.ExpandFill, MouseFilter = Control.MouseFilterEnum.Ignore });
-        column.AddChild(NavButton("Routes", NavIcon.Kind.Routes, () => RoutesToggled?.Invoke(), "Show where patients and staff are walking (R)"));
+        column.AddChild(NavButton("Routes", NavIcon.Kind.Routes, () => RoutesToggled?.Invoke(), "Show where staff are walking (R)"));
         column.AddChild(NavButton("Grid", NavIcon.Kind.Grid, () => GridToggled?.Invoke(), "Show or hide the building grid (G)"));
         return nav;
     }
@@ -641,7 +585,6 @@ public partial class MainHUD : CanvasLayer
             }
         }
 
-        Set("Hospital", _left.Visible);
         Set("Build", Mode == BlueprintSchool.Hospital.GameMode.Build);
         foreach (var (mode, button) in _modeButtons)
         {
@@ -650,9 +593,7 @@ public partial class MainHUD : CanvasLayer
                 button.SetPressedNoSignal(mode == Mode);
             }
         }
-        Set("Patients", Roster.Visible && !_rosterShowsStaff);
-        Set("Staff", Rota.Visible || (Roster.Visible && _rosterShowsStaff));
-        Set("Clinics", Clinics.Visible);
+        Set("Staff", Rota.Visible || Roster.Visible);
         Set("Hire", Recruitment.Visible);
         Set("Finances", Finances.Visible);
         Set("Stats", StatsScreen.Visible);
@@ -813,7 +754,6 @@ public partial class MainHUD : CanvasLayer
         TileKind.Grass => "Grounds",
         TileKind.Paving => "Footpath",
         TileKind.Road => "Road",
-        TileKind.AmbulanceBay => "Ambulance bay",
         TileKind.Parking => "Car park",
         TileKind.BuildingFloor => "Building",
         _ => kind.ToString(),

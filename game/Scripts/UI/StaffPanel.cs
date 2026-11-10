@@ -93,15 +93,15 @@ public partial class StaffPanel : PanelContainer
 
         var tiles = new HBoxContainer();
         tiles.AddThemeConstantOverride("separation", 8);
-        _tasks = HudWidgets.StatTile("Jobs done");
-        _skill = HudWidgets.StatTile("Clinical skill");
+        _tasks = HudWidgets.StatTile("Breaks taken");
+        _skill = HudWidgets.StatTile("Skill");
         _experience = HudWidgets.StatTile("Experience");
         tiles.AddChild(_tasks.Tile);
         tiles.AddChild(_skill.Tile);
         tiles.AddChild(_experience.Tile);
         column.AddChild(tiles);
 
-        _queueTitle = HudWidgets.Section("Up next");
+        _queueTitle = HudWidgets.Section("Breaks this shift");
         _queueTitle.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         column.AddChild(_queueTitle);
         var scroll = new ScrollContainer { SizeFlagsVertical = SizeFlags.ExpandFill, HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled };
@@ -204,12 +204,11 @@ public partial class StaffPanel : PanelContainer
         }
 
         _name.Text = m.Name;
-        var place = m.BaseRoomId is { } roomId && _sim.Spaces.FirstOrDefault(s => s.Id == roomId) is { } room ? room.Name : "A&E";
+        var place = m.BaseRoomId is { } roomId && _sim.Spaces.FirstOrDefault(s => s.Id == roomId) is { } room ? room.Name : "Whole school";
         _role.Text = $"{m.Grade} · {place}";
         var uniform = Looks.UniformColour(m);
         HudWidgets.SetAvatar(_avatar, m.Name, uniform.Luminance > 0.85f ? new Color("#5A6B7A") : uniform);
 
-        var task = m.CurrentTaskId is { } taskId ? _sim.Tasks.FirstOrDefault(t => t.Id == taskId) : null;
         _now.Heading.Text = m.Activity switch
         {
             StaffActivity.OnBreak or StaffActivity.WalkingToBreak => "On a break",
@@ -219,23 +218,21 @@ public partial class StaffPanel : PanelContainer
             _ => "Doing now",
         };
         _now.Text.Text = m.StatusText;
-        var patient = task is null ? null : _sim.FindPatient(task.PatientId);
         _now.Detail.Text = m.Activity switch
         {
             StaffActivity.OnBreak or StaffActivity.WalkingToBreak when m.BreakEndsAt is { } back => $"Back at {back:HH:mm}",
-            _ when patient is not null => $"For {patient.FullName}, {patient.Age}{(m.IsMoving ? " · on the way" : string.Empty)}",
-            StaffActivity.Idle => "Waiting for the next job",
+            StaffActivity.Idle => "Lessons and duties come in a later update",
             _ => string.Empty,
         };
         _now.Detail.Visible = _now.Detail.Text.Length > 0;
 
         var energy = 1 - m.Fatigue;
-        var energyColour = energy >= 0.5 ? UiStyle.Green : energy >= 0.25 ? new Color(ClinicalText.AmberHex) : UiStyle.Red;
+        var energyColour = energy >= 0.5 ? UiStyle.Green : energy >= 0.25 ? new Color(UiText.AmberHex) : UiStyle.Red;
         HudWidgets.SetMeter(_energy, energy, $"{energy:P0}", energyColour);
         var mood = m.Morale >= 0.7 ? "Good" : m.Morale >= 0.4 ? "OK" : "Low";
         HudWidgets.SetMeter(_morale, m.Morale, mood, UiStyle.Blue);
 
-        _tasks.Value.Text = m.TasksCompleted.ToString();
+        _tasks.Value.Text = m.Breaks.Count(b => b.Done).ToString();
         _skill.Value.Text = $"{m.Skill:P0}";
         _experience.Value.Text = m.YearsExperience == 1 ? "1 year" : $"{m.YearsExperience} years";
         _footer.Text = $"Age {m.Age} · £{m.Salary:N0} a year · {SchoolSimulation.ShiftName(m.Shift)} team, {SchoolSimulation.ShiftHoursText(m.Shift)} (rota: T)";
@@ -243,16 +240,13 @@ public partial class StaffPanel : PanelContainer
         RefreshQueue(m);
     }
 
-    /// <summary>The most urgent work on the board that someone in this role could pick up next.</summary>
+    /// <summary>The breaks planned for their shift: when, how long, and whether they have been.</summary>
     private void RefreshQueue(StaffMember m)
     {
-        var waiting = _sim.Tasks
-            .Where(t => t.Role == m.Role && t.AssignedStaffId is null && t.Id != m.CurrentTaskId)
-            .OrderByDescending(t => t.Priority)
-            .Take(4)
-            .Select(t => (Label: t.Label, Who: _sim.FindPatient(t.PatientId) is { } p ? $"{p.FullName}, {p.Age}" : string.Empty, Waiting: _sim.Now - t.CreatedAt))
+        var breaks = m.Breaks
+            .Select(b => (Label: $"{(b.IsMeal ? "Meal break" : "Tea break")} · {b.Minutes} min", When: b.Done ? "Taken" : b.TakenAt is not null ? "On it now" : $"{b.Start:HH:mm}"))
             .ToList();
-        var signature = string.Join("|", waiting.Select(w => $"{w.Label}{w.Who}{(int)w.Waiting.TotalMinutes}"));
+        var signature = string.Join("|", breaks.Select(b => $"{b.Label}{b.When}"));
         if (signature == _queueSignature)
         {
             return;
@@ -264,29 +258,22 @@ public partial class StaffPanel : PanelContainer
             child.QueueFree();
         }
 
-        _queueTitle.Text = $"Waiting for a {RoleName(m.Role)}";
-        if (waiting.Count == 0)
+        if (breaks.Count == 0)
         {
-            _queue.AddChild(UiStyle.Body("Nothing waiting. They'll pick up the next job as it comes in.", muted: true));
+            _queue.AddChild(UiStyle.Body("No breaks planned.", muted: true));
             return;
         }
 
-        foreach (var (label, who, wait) in waiting)
+        foreach (var (label, when) in breaks)
         {
             var row = new PanelContainer();
             row.AddThemeStyleboxOverride("panel", UiStyle.Box(new Color("#F7F9FB"), 10, null, 10));
             var line = new HBoxContainer();
             line.AddThemeConstantOverride("separation", 8);
-            var text = new Label { Text = string.IsNullOrEmpty(who) ? label : $"{label} · {who}", AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
+            var text = new Label { Text = label, AutowrapMode = TextServer.AutowrapMode.WordSmart, SizeFlagsHorizontal = SizeFlags.ExpandFill };
             text.AddThemeFontSizeOverride("font_size", 14);
             line.AddChild(text);
-            var minutes = UiStyle.Caption(ClinicalText.Duration(wait), 13);
-            if (wait.TotalMinutes >= 30)
-            {
-                minutes.AddThemeColorOverride("font_color", UiStyle.AmberText);
-            }
-
-            line.AddChild(minutes);
+            line.AddChild(UiStyle.Caption(when, 13));
             row.AddChild(line);
             _queue.AddChild(row);
         }

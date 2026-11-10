@@ -32,10 +32,8 @@ public sealed class BuildMenu
     /// <summary>Puts doors in a waiting room's walls: the entrance on the front path, and doors through to corridors.</summary>
     public const string WaitingDoors = "waiting_doors";
 
-    /// <summary>Placing or moving resus trolleys.</summary>
-    public const string ResusTrolleys = "resus_trolleys";
 
-    public static readonly IReadOnlySet<string> SpecialItems = new HashSet<string> { ExtendBuilding, AddFloor, WaitingChairs, WaitingDesk, WaitingDoors, ResusTrolleys };
+    public static readonly IReadOnlySet<string> SpecialItems = new HashSet<string> { ExtendBuilding, AddFloor, WaitingChairs, WaitingDesk, WaitingDoors };
 
     private static readonly JsonSerializerOptions Options = new()
     {

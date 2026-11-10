@@ -36,7 +36,7 @@
     "door_width_m": 2.0,
     "base_cost": 6000,
     "cost_per_square_metre": 700,
-    "staffing": "None: run by a catering contractor, who pays the hospital a share of the takings.",
+    "staffing": "None: run by a catering contractor, who pays the school a share of the takings.",
     "furniture": [
       "food_counter",
       "vending_machine",
@@ -82,7 +82,7 @@
     "door_width_m": 1.0,
     "base_cost": 1000,
     "cost_per_square_metre": 600,
-    "staffing": "None: the machines are stocked by the supplier, who pays the hospital a share of the takings.",
+    "staffing": "None: the machines are stocked by the supplier, who pays the school a share of the takings.",
     "furniture": [
       "vending_machine",
       "water_cooler",

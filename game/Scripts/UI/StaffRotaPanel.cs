@@ -23,13 +23,13 @@ public partial class StaffRotaPanel : PanelContainer
         Everyone,
     }
 
-    /// <summary>A row of the rota: A&amp;E, a ward, a clinic, a service room or the whole hospital (porters).</summary>
+    /// <summary>A row of the rota: the whole school for now; rooms and departments come later.</summary>
     internal sealed record Place(string? RoomId, string Name, string Sub, StaffRole[] Roles);
 
     private static readonly Color Hair = new("#E6ECF1");
     private static readonly Color Night = new("#24324A");
     private static readonly Color NightTint = new("#E9ECF3");
-    private static readonly Color Amber = new(ClinicalText.AmberHex);
+    private static readonly Color Amber = new(UiText.AmberHex);
     private static readonly Color GreyDot = new("#A7B2BC");
 
     private readonly Dictionary<Tab, Button> _tabs = new();
@@ -218,7 +218,7 @@ public partial class StaffRotaPanel : PanelContainer
         }
 
         bar.AddChild(new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill });
-        foreach (var (key, text) in new[] { ("all", "Everyone"), ("nurse", "Nurses"), ("doctor", "Doctors"), ("porter", "Porters"), ("other", "Others") })
+        foreach (var (key, text) in new[] { ("all", "Everyone"), ("teacher", "Teachers"), ("support", "Support staff") })
         {
             var chip = UiStyle.SecondaryButton(text, () =>
             {
@@ -251,8 +251,8 @@ public partial class StaffRotaPanel : PanelContainer
         var day = _sim.CurrentShift == StaffShift.Day;
         var left = _sim.CurrentShiftEnd - _sim.Now;
         _shiftPill.Text = day
-            ? $"Day shift · night team in at 20:00 ({ClinicalText.Duration(left)})"
-            : $"Night shift · day team in at 08:00 ({ClinicalText.Duration(left)})";
+            ? $"Day shift · night team in at 20:00 ({UiText.Duration(left)})"
+            : $"Night shift · day team in at 08:00 ({UiText.Duration(left)})";
         _shiftPill.AddThemeColorOverride("font_color", day ? UiStyle.AmberText : Colors.White);
         var pill = UiStyle.Box(day ? UiStyle.AmberTint : Night, 14, day ? UiStyle.AmberBorder : Night, 0);
         pill.ContentMarginLeft = pill.ContentMarginRight = 12;
@@ -262,7 +262,7 @@ public partial class StaffRotaPanel : PanelContainer
         var onDuty = _sim.OnDutyStaff.ToList();
         var gaps = _sim.RecommendedStaffing().Count(n => n.Short > 0);
         _stats[0].Value.Text = onDuty.Count.ToString();
-        _stats[1].Value.Text = onDuty.Count(s => s.CurrentTaskId is not null || s.Activity == StaffActivity.Working).ToString();
+        _stats[1].Value.Text = onDuty.Count(s => s.Activity == StaffActivity.Working).ToString();
         _stats[2].Value.Text = onDuty.Count(s => s.IsOnBreak).ToString();
         _stats[3].Value.Text = _sim.Staff.Count(s => !s.IsOnDuty).ToString();
         _stats[4].Value.Text = gaps.ToString();
@@ -309,43 +309,15 @@ public partial class StaffRotaPanel : PanelContainer
 
     private bool Shown(StaffRole role) => _filter switch
     {
-        "nurse" => role is StaffRole.Nurse or StaffRole.HealthcareAssistant,
-        "doctor" => role == StaffRole.Doctor,
-        "porter" => role == StaffRole.Porter,
-        "other" => role is not (StaffRole.Nurse or StaffRole.HealthcareAssistant or StaffRole.Doctor or StaffRole.Porter),
+        "teacher" => role is StaffRole.Teacher,
+        "support" => role is not StaffRole.Teacher,
         _ => true,
     };
 
     /// <summary>Every place someone can work, in rota order.</summary>
     private List<Place> Places()
     {
-        var places = new List<Place> { new(null, "A&E", "Emergency department", new[] { StaffRole.Nurse, StaffRole.HealthcareAssistant, StaffRole.Doctor, StaffRole.Receptionist }) };
-        foreach (var ward in _sim.Wards.OrderBy(w => w.Id, StringComparer.Ordinal))
-        {
-            var used = ward.Beds.Count(b => b.OccupantId.HasValue);
-            var doctors = _sim.UnitOf(ward) == WardUnit.IntensiveCare ? StaffRole.Anaesthetist : StaffRole.Doctor;
-            places.Add(new(ward.Id, ward.Name, $"{ward.Beds.Count} beds · {used} in use", new[] { StaffRole.Nurse, StaffRole.HealthcareAssistant, doctors }));
-        }
-
-        foreach (var clinic in _sim.ClinicRooms)
-        {
-            places.Add(new(clinic.Id, clinic.Name, "Outpatient clinic · days only", new[] { StaffRole.Doctor }));
-        }
-
-        foreach (var desk in _sim.SpacesOfKind(CareSpaceKind.OutpatientReception))
-        {
-            places.Add(new(desk.Id, desk.Name, "Outpatients · days only", new[] { StaffRole.Receptionist }));
-        }
-
-        foreach (var room in _sim.Spaces.Where(s => s.IsServiceRoom).OrderBy(s => s.Kind).ThenBy(s => s.Id, StringComparer.Ordinal))
-        {
-            var role = SchoolSimulation.RoleForRoom(room.Kind);
-            places.Add(room.Kind == CareSpaceKind.Theatre
-                ? new(room.Id, room.Name, "Surgeons and anaesthetists", new[] { role, StaffRole.Anaesthetist })
-                : new(room.Id, room.Name, Capitalise(StaffGrades.RoleName(role, plural: true)), new[] { role }));
-        }
-
-        places.Add(new(null, "Whole hospital", "Porters", new[] { StaffRole.Porter }));
+        var places = new List<Place> { new(null, "Whole school", "Teachers, assistants, reception and site staff", Enum.GetValues<StaffRole>()) };
         return places;
     }
 
@@ -391,7 +363,7 @@ public partial class StaffRotaPanel : PanelContainer
         }
 
         _content.AddChild(Spacer(8));
-        var hint = UiStyle.Caption("Drag someone to another place or to the other shift. A move happens once they've finished with their patient; a change of shift sends them home or brings them in.", 12);
+        var hint = UiStyle.Caption("Drag someone to another place or to the other shift. A move happens straight away; a change of shift sends them home or brings them in.", 12);
         hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         _content.AddChild(hint);
     }
@@ -617,7 +589,7 @@ public partial class StaffRotaPanel : PanelContainer
         legend.AddChild(Legend(BreakTrack.TakenColour, false, "Taken"));
         legend.AddChild(Legend(Amber, false, "On a break now"));
         legend.AddChild(Legend(Amber, true, "Coming up"));
-        legend.AddChild(Legend(UiStyle.Red, true, "Put off: patients need them"));
+        legend.AddChild(Legend(UiStyle.Red, true, "Put off: they're needed"));
         legend.AddChild(Legend(UiStyle.AmberTint, false, "A third or more of the team away"));
         _content.AddChild(legend);
         var other = shift == StaffShift.Day ? "night" : "day";
@@ -883,7 +855,7 @@ public partial class StaffRotaPanel : PanelContainer
         _now.Heading.Text = StatusWord(m).ToUpperInvariant();
         _now.Text.Text = m.StatusText;
         _now.Detail.Text = m.HasPendingMove
-            ? $"Moving to {_sim.PlaceName(m.Role, m.PendingRoomId)} once they finish with their patient."
+            ? $"Moving to {_sim.PlaceName(m.Role, m.PendingRoomId)} once they're free."
             : m.Shift != _sim.CurrentShift && m.IsOnDuty ? "Their shift is over: going home once they're free." : string.Empty;
         _now.Detail.Visible = _now.Detail.Text.Length > 0;
 
@@ -1003,7 +975,7 @@ public partial class StaffRotaPanel : PanelContainer
         StaffActivity.OffDuty => "off",
         StaffActivity.GoingHome => "home",
         StaffActivity.OnBreak or StaffActivity.WalkingToBreak => "break",
-        _ when m.CurrentTaskId is not null || m.Activity == StaffActivity.Working => "work",
+        _ when m.Activity == StaffActivity.Working => "work",
         _ => "free",
     };
 
@@ -1173,7 +1145,7 @@ public partial class BreakTrack : Control
             DrawLine(new Vector2(x, 0), new Vector2(x, Size.Y), new Color("#E6ECF1"));
         }
 
-        var amber = new Color(ClinicalText.AmberHex);
+        var amber = new Color(UiText.AmberHex);
         foreach (var b in Member.Breaks)
         {
             var from = b.TakenAt ?? b.Start;
