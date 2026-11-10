@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BlueprintSchool.Simulation.Data.Models;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using Godot;
@@ -278,7 +278,7 @@ public partial class StaffRotaPanel : PanelContainer
     {
         var signature = $"{_tab}|{_filter}|{_selectedId}|{_sim.CurrentShift}|" + string.Join(",", _sim.Staff.Select(s =>
             $"{s.Id}{s.Name}{s.Shift}{s.BaseRoomId}{s.HasPendingMove}{Status(s)}{(int)(s.Fatigue * 20)}{s.Breaks.Count(b => b.Done)}{s.Breaks.Count}{s.Breaks.Count(_sim.IsBreakLate)}"))
-            + "|" + string.Join(",", _sim.Spaces.Where(s => s.IsWard || s.IsServiceRoom || s.Kind is CareSpaceKind.Clinic or CareSpaceKind.OutpatientReception).Select(s => s.Id + s.Name))
+            + "|" + string.Join(",", _sim.Spaces.Where(s => s.IsTeachingRoom).Select(s => s.Id + s.Name))
             + (_tab == Tab.Breaks ? "|" + (_sim.Now.Hour * 12) + (_sim.Now.Minute / 5) : string.Empty);
         if (!force && signature == _signature)
         {
@@ -861,9 +861,9 @@ public partial class StaffRotaPanel : PanelContainer
 
         _dayButton.SetPressedNoSignal(m.Shift == StaffShift.Day);
         _nightButton.SetPressedNoSignal(m.Shift == StaffShift.Night);
-        var clinic = m.BaseRoomId is { } roomId && _sim.FindSpace(roomId) is { Kind: CareSpaceKind.Clinic or CareSpaceKind.OutpatientReception };
-        _nightButton.Disabled = clinic;
-        _nightButton.TooltipText = clinic ? "Clinics only run in the day" : string.Empty;
+        var teaching = m.BaseRoomId is { } roomId && _sim.FindSpace(roomId) is { IsTeachingRoom: true };
+        _nightButton.Disabled = teaching;
+        _nightButton.TooltipText = teaching ? "Lessons only run in the day" : string.Empty;
 
         var postings = _sim.PostingsFor(m.Role).Where(p => _sim.CanMoveTo(m, p.RoomId)).ToList();
         var signature = $"{m.Id}|{m.BaseRoomId}|{m.PendingRoomId}|" + string.Join(",", postings.Select(p => p.RoomId + p.Name));

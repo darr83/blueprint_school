@@ -109,24 +109,24 @@ public partial class MainHUD : CanvasLayer
     public CheatConsole Cheats { get; } = new() { Name = "CheatConsole", Visible = false };
 
     /// <summary>Raised when the player picks Play or Build in the top bar, or presses the Build button.</summary>
-    public event Action<BlueprintSchool.Hospital.GameMode>? ModeRequested;
+    public event Action<BlueprintSchool.School.GameMode>? ModeRequested;
 
     /// <summary>The mode the scene is in, shown on the Play / Build switch.</summary>
-    public BlueprintSchool.Hospital.GameMode Mode
+    public BlueprintSchool.School.GameMode Mode
     {
         get => _mode;
         set
         {
             _mode = value;
-            Build.Visible = value == BlueprintSchool.Hospital.GameMode.Build;
-            if (value != BlueprintSchool.Hospital.GameMode.Build && Decorate.Visible)
+            Build.Visible = value == BlueprintSchool.School.GameMode.Build;
+            if (value != BlueprintSchool.School.GameMode.Build && Decorate.Visible)
             {
                 Decorate.Close();
             }
         }
     }
 
-    private BlueprintSchool.Hospital.GameMode _mode;
+    private BlueprintSchool.School.GameMode _mode;
 
     private PanelContainer? _hoverPanel;
 
@@ -168,14 +168,14 @@ public partial class MainHUD : CanvasLayer
     }
 
     /// <summary>Shows one room's details, closing the other right-hand panels.</summary>
-    public void ShowRoom(BlueprintSchool.Simulation.Hospital.CareSpace room)
+    public void ShowRoom(BlueprintSchool.Simulation.Rooms.Room room)
     {
         HideRightPanels();
         RoomInfo.Show(room);
     }
 
     /// <summary>Opens the Decorate panel on a room, closing the other right-hand panels.</summary>
-    public void ShowDecorate(BlueprintSchool.Simulation.Hospital.CareSpace room)
+    public void ShowDecorate(BlueprintSchool.Simulation.Rooms.Room room)
     {
         HideRightPanels();
         Decorate.Show(room);
@@ -216,7 +216,7 @@ public partial class MainHUD : CanvasLayer
         StatsScreen.Visible = show;
     }
 
-    public void Initialise(GameSession session, BlueprintSchool.Hospital.BuildTool tool)
+    public void Initialise(GameSession session, BlueprintSchool.School.BuildTool tool)
     {
         _session = session;
         Layer = 10;
@@ -340,7 +340,7 @@ public partial class MainHUD : CanvasLayer
         var where = building is null ? (floor == 0 ? Describe(site[local]) : "Open air") : floor == 0 ? building.Name : $"{building.Name}, {SiteMap.FloorName(floor).ToLowerInvariant()}";
         foreach (var space in _session.Simulation.Spaces)
         {
-            if (space.Rect.Contains(tile) && space.Kind != BlueprintSchool.Simulation.Hospital.CareSpaceKind.Corridor)
+            if (space.Rect.Contains(tile) && space.Kind != BlueprintSchool.Simulation.Rooms.RoomKind.Corridor)
             {
                 where = $"{space.Name} ({space.AreaSquareMetres:0} m²)";
             }
@@ -436,7 +436,7 @@ public partial class MainHUD : CanvasLayer
         return bar;
     }
 
-    private readonly Dictionary<BlueprintSchool.Hospital.GameMode, Button> _modeButtons = new();
+    private readonly Dictionary<BlueprintSchool.School.GameMode, Button> _modeButtons = new();
 
     /// <summary>The Play / Build switch: what clicking on the map picks.</summary>
     private Control BuildModeSwitch()
@@ -448,12 +448,12 @@ public partial class MainHUD : CanvasLayer
         var row = new HBoxContainer();
         row.AddThemeConstantOverride("separation", 2);
         pill.AddChild(row);
-        AddModeButton(row, "Play", BlueprintSchool.Hospital.GameMode.Play, "Play mode: click staff and rooms");
-        AddModeButton(row, "Build", BlueprintSchool.Hospital.GameMode.Build, "Build mode: build, and click rooms and items (B)");
+        AddModeButton(row, "Play", BlueprintSchool.School.GameMode.Play, "Play mode: click staff and rooms");
+        AddModeButton(row, "Build", BlueprintSchool.School.GameMode.Build, "Build mode: build, and click rooms and items (B)");
         return pill;
     }
 
-    private void AddModeButton(HBoxContainer parent, string text, BlueprintSchool.Hospital.GameMode mode, string tooltip)
+    private void AddModeButton(HBoxContainer parent, string text, BlueprintSchool.School.GameMode mode, string tooltip)
     {
         var button = new Button
         {
@@ -529,7 +529,7 @@ public partial class MainHUD : CanvasLayer
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", 6);
         nav.AddChild(column);
-        column.AddChild(NavButton("Build", NavIcon.Kind.Build, () => ModeRequested?.Invoke(Mode == BlueprintSchool.Hospital.GameMode.Build ? BlueprintSchool.Hospital.GameMode.Play : BlueprintSchool.Hospital.GameMode.Build), "Build mode: build rooms and corridors, and pick rooms and items (B)"));
+        column.AddChild(NavButton("Build", NavIcon.Kind.Build, () => ModeRequested?.Invoke(Mode == BlueprintSchool.School.GameMode.Build ? BlueprintSchool.School.GameMode.Play : BlueprintSchool.School.GameMode.Build), "Build mode: build rooms and corridors, and pick rooms and items (B)"));
         column.AddChild(NavButton("Staff", NavIcon.Kind.Staff, ToggleRota, "Staff rota: day and night teams, breaks and who works where (T)"));
         column.AddChild(NavButton("Hire", NavIcon.Kind.Hire, ToggleRecruitment, "Recruitment: hire and let go of staff (H)"));
         column.AddChild(NavButton("Finances", NavIcon.Kind.Finances, ToggleFinances, "Money in and out (F)"));
@@ -585,7 +585,7 @@ public partial class MainHUD : CanvasLayer
             }
         }
 
-        Set("Build", Mode == BlueprintSchool.Hospital.GameMode.Build);
+        Set("Build", Mode == BlueprintSchool.School.GameMode.Build);
         foreach (var (mode, button) in _modeButtons)
         {
             if (button.ButtonPressed != (mode == Mode))

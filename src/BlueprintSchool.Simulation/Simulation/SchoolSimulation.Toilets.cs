@@ -1,6 +1,6 @@
 using BlueprintSchool.Simulation.Agents;
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
@@ -75,10 +75,10 @@ public sealed partial class SchoolSimulation
     private GameRandom ToiletRandom => _toiletRandom ??= new GameRandom(_options.Seed + 130_363);
 
     /// <summary>Public toilets, accessible toilets and staff toilets.</summary>
-    public IEnumerable<CareSpace> ToiletRooms => _spaces.Values.Where(s => s.IsToilet);
+    public IEnumerable<Room> ToiletRooms => _spaces.Values.Where(s => s.IsToilet);
 
     /// <summary>True when pupils and visitors have a toilet they can use.</summary>
-    public bool HasPublicToilets => _spaces.Values.Any(s => s.Kind is CareSpaceKind.Toilets or CareSpaceKind.AccessibleToilet);
+    public bool HasPublicToilets => _spaces.Values.Any(s => s.Kind is RoomKind.Toilets or RoomKind.AccessibleToilet);
 
     /// <summary>Everyone on their way to, in or washing up after the toilet right now.</summary>
     public IReadOnlyCollection<ToiletTrip> ToiletTrips => _toiletTrips.Values;
@@ -167,19 +167,19 @@ public sealed partial class SchoolSimulation
     private HashSet<GridCoord> ToiletsTaken() =>
         _toiletTrips.Values.Where(t => t.Stage is ToiletStage.Going or ToiletStage.Using).Select(t => t.Target).ToHashSet();
 
-    private bool UsableBy(CareSpace room, bool staff) =>
-        room.Kind != CareSpaceKind.StaffToilet || staff;
+    private bool UsableBy(Room room, bool staff) =>
+        room.Kind != RoomKind.StaffToilet || staff;
 
     /// <summary>Sends someone to the nearest free toilet, or to queue for one. False when there was nowhere to go.</summary>
-    private bool StartToiletTrip(Agent person, IReadOnlyList<CareSpace> rooms, bool preferAccessible, bool staff)
+    private bool StartToiletTrip(Agent person, IReadOnlyList<Room> rooms, bool preferAccessible, bool staff)
     {
         // The nearest, with a pull towards the right kind: staff to their own toilet.
         var choices = rooms
             .Where(r => UsableBy(r, staff) && r.ToiletSpots.Count > 0)
-            .Select(r => (Room: r, Score: Distance(person.Tile, r.PatientSpot)
-                                           - (staff && r.Kind == CareSpaceKind.StaffToilet ? 60 : 0)
-                                           - (preferAccessible && r.Kind == CareSpaceKind.AccessibleToilet ? 40 : 0)
-                                           + (!preferAccessible && r.Kind == CareSpaceKind.AccessibleToilet ? 15 : 0)
+            .Select(r => (Room: r, Score: Distance(person.Tile, r.UseSpot)
+                                           - (staff && r.Kind == RoomKind.StaffToilet ? 60 : 0)
+                                           - (preferAccessible && r.Kind == RoomKind.AccessibleToilet ? 40 : 0)
+                                           + (!preferAccessible && r.Kind == RoomKind.AccessibleToilet ? 15 : 0)
                                            + ToiletRandom.Range(0, 10)))
             .OrderBy(c => c.Score)
             .Select(c => c.Room)
@@ -203,7 +203,7 @@ public sealed partial class SchoolSimulation
         }
 
         // Every toilet is busy: wait inside the door of the nearest block that has room to queue.
-        foreach (var room in choices.Where(r => r.Kind == CareSpaceKind.Toilets))
+        foreach (var room in choices.Where(r => r.Kind == RoomKind.Toilets))
         {
             var queued = _toiletTrips.Values.Where(t => t.RoomId == room.Id && t.Stage == ToiletStage.Queueing).Select(t => t.Target).ToHashSet();
             var spots = room.QueueTiles.Where(t => !queued.Contains(t)).ToList();
@@ -227,7 +227,7 @@ public sealed partial class SchoolSimulation
         }
     }
 
-    private void ToiletProgress(ToiletTrip trip, CareSpace room)
+    private void ToiletProgress(ToiletTrip trip, Room room)
     {
         var person = trip.Person;
         var arrived = !person.IsMoving && person.Tile == trip.Target;

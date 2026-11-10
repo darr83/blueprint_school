@@ -12,7 +12,7 @@ namespace BlueprintSchool.Core;
 public partial class GameManager : Node
 {
     public const string MainMenuScene = "res://Scenes/Main/MainMenu.tscn";
-    public const string HospitalScene = "res://Scenes/Hospital/Hospital.tscn";
+    public const string SchoolScene = "res://Scenes/School/School.tscn";
 
     public static GameManager Instance { get; private set; } = null!;
 
@@ -61,7 +61,7 @@ public partial class GameManager : Node
         }
 
         Session = GameSession.CreateNew(Database, schoolName, unlimitedMoney);
-        ChangeScene(HospitalScene);
+        ChangeScene(SchoolScene);
     }
 
     /// <summary>Creates a new session without changing scene (used when the hospital scene is run directly).</summary>
@@ -82,7 +82,7 @@ public partial class GameManager : Node
 
         var save = SaveManager.Read(slotName);
         Session = GameSession.FromSave(Database, save);
-        ChangeScene(HospitalScene);
+        ChangeScene(SchoolScene);
     }
 
     public void SaveGame(string displayName, CameraState camera)

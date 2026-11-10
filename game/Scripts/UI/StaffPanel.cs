@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using BlueprintSchool.Hospital;
+using BlueprintSchool.School;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using Godot;

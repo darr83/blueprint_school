@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Agents;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
 
@@ -41,32 +41,32 @@ public sealed partial class SchoolSimulation
     public PlacedChair? ChairAt(GridCoord tile) => _chairs.FirstOrDefault(c => c.Tile == tile);
 
     /// <summary>The desk and doors placed in a waiting room.</summary>
-    public WaitingFittings FittingsOf(CareSpace room) => _fittings.GetValueOrDefault(room.Id) ?? WaitingFittings.Empty;
+    public WaitingFittings FittingsOf(Room room) => _fittings.GetValueOrDefault(room.Id) ?? WaitingFittings.Empty;
 
     /// <summary>The reception desk's layout in a waiting room, if it has one.</summary>
-    public DeskLayout? DeskOf(CareSpace room) =>
+    public DeskLayout? DeskOf(Room room) =>
         FittingsOf(room).Desk is { } desk ? WaitingRoomLayout.Desk(room.Rect, desk, WaitingRoomLayout.DoorTiles(room.Rect, room.Doors)) : null;
 
     /// <summary>True for a door that opens onto the front path through the building's main entrance.</summary>
-    public bool IsEntranceDoor(CareSpace room, Doorway door) => IsEntranceDoor(room.Rect, door);
+    public bool IsEntranceDoor(Room room, Doorway door) => IsEntranceDoor(room.Rect, door);
 
     private bool IsEntranceDoor(GridRect rect, Doorway door) =>
         Site.FloorOf(rect) == 0 && WaitingRoomLayout.DoorTiles(rect, new[] { door }).All(t => MainBuilding.IsOpening(t, door.Side));
 
     private bool OpensOntoCorridor(GridRect rect, Doorway door) =>
-        WaitingRoomLayout.DoorTiles(rect, new[] { door }).All(t => _spaces.Values.Any(s => s.Kind == CareSpaceKind.Corridor && s.Rect.Contains(Step(t, door.Side))));
+        WaitingRoomLayout.DoorTiles(rect, new[] { door }).All(t => _spaces.Values.Any(s => s.Kind == RoomKind.Corridor && s.Rect.Contains(Step(t, door.Side))));
 
-    public bool HasEntranceDoor(CareSpace room) => room.Doors.Any(d => IsEntranceDoor(room, d));
+    public bool HasEntranceDoor(Room room) => room.Doors.Any(d => IsEntranceDoor(room, d));
 
-    public bool HasInnerDoor(CareSpace room) => room.Doors.Any(d => !IsEntranceDoor(room, d));
+    public bool HasInnerDoor(Room room) => room.Doors.Any(d => !IsEntranceDoor(room, d));
 
     /// <summary>The main reception visitors come in to: one with a reception desk and an entrance door.</summary>
-    public CareSpace? MainWaitingRoom =>
-        SpacesOfKind(CareSpaceKind.Waiting).FirstOrDefault(r => FittingsOf(r).Desk is not null && HasEntranceDoor(r) && HasInnerDoor(r))
-        ?? SpacesOfKind(CareSpaceKind.Waiting).FirstOrDefault(r => FittingsOf(r).Desk is not null && HasEntranceDoor(r));
+    public Room? MainWaitingRoom =>
+        SpacesOfKind(RoomKind.Waiting).FirstOrDefault(r => FittingsOf(r).Desk is not null && HasEntranceDoor(r) && HasInnerDoor(r))
+        ?? SpacesOfKind(RoomKind.Waiting).FirstOrDefault(r => FittingsOf(r).Desk is not null && HasEntranceDoor(r));
 
     /// <summary>What a waiting room still needs before visitors can use it (empty when it is ready).</summary>
-    public IReadOnlyList<string> WaitingRoomProblems(CareSpace room)
+    public IReadOnlyList<string> WaitingRoomProblems(Room room)
     {
         var missing = new List<string>();
         if (FittingsOf(room).Desk is null)
@@ -90,7 +90,7 @@ public sealed partial class SchoolSimulation
     /// <summary>The reception's needs, for the list of what the school is missing.</summary>
     private IEnumerable<string> WaitingRoomReasons()
     {
-        var rooms = SpacesOfKind(CareSpaceKind.Waiting).ToList();
+        var rooms = SpacesOfKind(RoomKind.Waiting).ToList();
         if (rooms.Count == 0)
         {
             return new[] { "a waiting room" };
@@ -110,7 +110,7 @@ public sealed partial class SchoolSimulation
     /// <summary>Whether a reception desk can stand at <paramref name="tile"/> in a waiting room, facing <paramref name="facing"/>.</summary>
     public BuildCheck CheckReceptionDesk(string roomId, GridCoord tile, WallSide facing)
     {
-        if (FindSpace(roomId) is not { Kind: CareSpaceKind.Waiting } room)
+        if (FindSpace(roomId) is not { Kind: RoomKind.Waiting } room)
         {
             return new BuildCheck(0, new[] { "Reception desks go in a waiting room." });
         }
@@ -118,7 +118,7 @@ public sealed partial class SchoolSimulation
         var problems = new List<string>();
         var doors = WaitingRoomLayout.DoorTiles(room.Rect, room.Doors);
         var layout = WaitingRoomLayout.Desk(room.Rect, new ReceptionDesk(tile, facing), doors);
-        var needed = layout.DeskTiles.Append(layout.StaffSpot).Append(layout.PatientSpot).ToList();
+        var needed = layout.DeskTiles.Append(layout.StaffSpot).Append(layout.UseSpot).ToList();
         if (!needed.All(room.Rect.Contains))
         {
             problems.Add("Doesn't fit: the desk, the receptionist behind it and a patient in front must all be inside the room.");
@@ -163,7 +163,7 @@ public sealed partial class SchoolSimulation
     // ---------------------------------------------------------------- doors
 
     /// <summary>The door a click on <paramref name="tile"/> (a tile along the room's wall) would place, and on which side.</summary>
-    public Doorway? DoorAt(CareSpace room, GridCoord tile)
+    public Doorway? DoorAt(Room room, GridCoord tile)
     {
         var r = room.Rect;
         var sides = new List<WallSide>();
@@ -199,10 +199,10 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>The placed door covering a wall tile, if any.</summary>
-    public Doorway? ExistingDoorAt(CareSpace room, GridCoord tile) =>
+    public Doorway? ExistingDoorAt(Room room, GridCoord tile) =>
         room.Doors.FirstOrDefault(d => WaitingRoomLayout.DoorTiles(room.Rect, new[] { d }).Contains(tile));
 
-    private string? DoorProblem(CareSpace room, Doorway door)
+    private string? DoorProblem(Room room, Doorway door)
     {
         var inside = WaitingRoomLayout.DoorTiles(room.Rect, new[] { door }).ToList();
         if (!OpensOntoCorridor(room.Rect, door) && !IsEntranceDoor(room, door))
@@ -220,7 +220,7 @@ public sealed partial class SchoolSimulation
             return "Chairs are in the way: move them first.";
         }
 
-        if (DeskOf(room) is { } desk && inside.Intersect(desk.DeskTiles.Append(desk.StaffSpot).Append(desk.PatientSpot)).Any())
+        if (DeskOf(room) is { } desk && inside.Intersect(desk.DeskTiles.Append(desk.StaffSpot).Append(desk.UseSpot)).Any())
         {
             return "The reception desk is in the way.";
         }
@@ -231,7 +231,7 @@ public sealed partial class SchoolSimulation
     /// <summary>Whether a door can go in the waiting room wall at <paramref name="tile"/>.</summary>
     public BuildCheck CheckWaitingDoor(string roomId, GridCoord tile)
     {
-        if (FindSpace(roomId) is not { Kind: CareSpaceKind.Waiting } room)
+        if (FindSpace(roomId) is not { Kind: RoomKind.Waiting } room)
         {
             return new BuildCheck(0, new[] { "Doors are placed in a waiting room's walls." });
         }
@@ -287,7 +287,7 @@ public sealed partial class SchoolSimulation
     /// <summary>Whether the door at <paramref name="tile"/> can be taken out (refunding half its cost).</summary>
     public BuildCheck CheckRemoveWaitingDoor(string roomId, GridCoord tile)
     {
-        if (FindSpace(roomId) is not { Kind: CareSpaceKind.Waiting } room || ExistingDoorAt(room, tile) is not { } door)
+        if (FindSpace(roomId) is not { Kind: RoomKind.Waiting } room || ExistingDoorAt(room, tile) is not { } door)
         {
             return new BuildCheck(0, new[] { "There is no door there." });
         }
@@ -328,13 +328,13 @@ public sealed partial class SchoolSimulation
     }
 
     /// <summary>The room as it would be with these fittings.</summary>
-    private CareSpace Refit(CareSpace room, WaitingFittings fittings)
+    private Room Refit(Room room, WaitingFittings fittings)
     {
         var template = Database.RoomTemplates[room.TemplateId];
         return RoomLayoutEngine.Build(template, Database, room.Id, room.Name, room.Rect, room.DoorSide, fittings: fittings);
     }
 
-    private void ApplyFittings(CareSpace room, WaitingFittings fittings)
+    private void ApplyFittings(Room room, WaitingFittings fittings)
     {
         _fittings[room.Id] = fittings;
         _spaces[room.Id] = Refit(room, fittings);
@@ -345,7 +345,7 @@ public sealed partial class SchoolSimulation
     /// A waiting room being moved: if it keeps its size its desk and chairs go with it, along with any doors that
     /// still open onto a corridor or the front path. Otherwise the desk has to be placed again.
     /// </summary>
-    private void MoveFittings(CareSpace room, GridRect to)
+    private void MoveFittings(Room room, GridRect to)
     {
         var from = room.Rect;
         var fittings = FittingsOf(room);
@@ -377,12 +377,12 @@ public sealed partial class SchoolSimulation
     private string? ChairProblem(GridCoord tile)
     {
         var walled = _spaces.Values.FirstOrDefault(s => s.HasWalls && s.Rect.Contains(tile));
-        if (walled is not null && walled.Kind != CareSpaceKind.Waiting)
+        if (walled is not null && walled.Kind != RoomKind.Waiting)
         {
             return "Chairs go in a waiting room or along a corridor.";
         }
 
-        if (walled is null && !_spaces.Values.Any(s => s.Kind == CareSpaceKind.Corridor && s.Rect.Contains(tile)))
+        if (walled is null && !_spaces.Values.Any(s => s.Kind == RoomKind.Corridor && s.Rect.Contains(tile)))
         {
             return "Chairs go in a waiting room or along a corridor.";
         }
@@ -501,7 +501,7 @@ public sealed partial class SchoolSimulation
         var room = _spaces.Values.FirstOrDefault(s => s.HasWalls && s.Rect.Contains(tile));
         return room is not null
             ? room.Rect.Contains(next)
-            : _spaces.Values.Any(s => s.Kind == CareSpaceKind.Corridor && s.Rect.Contains(next)) && !_spaces.Values.Any(s => s.HasWalls && s.Rect.Contains(next));
+            : _spaces.Values.Any(s => s.Kind == RoomKind.Corridor && s.Rect.Contains(next)) && !_spaces.Values.Any(s => s.HasWalls && s.Rect.Contains(next));
     }
 
     public WallSide SuggestChairFacing(GridCoord tile)
@@ -544,7 +544,7 @@ public sealed partial class SchoolSimulation
     // ---------------------------------------------------------------- where people wait
 
     /// <summary>The corridor tile just outside a room's (first) door: where someone heading in arrives.</summary>
-    private static GridCoord DoorstepOf(CareSpace room)
+    private static GridCoord DoorstepOf(Room room)
     {
         if (room.Doors.FirstOrDefault() is not { } door)
         {
@@ -567,7 +567,7 @@ public sealed partial class SchoolSimulation
             blocked.UnionWith(WaitingRoomLayout.DoorTiles(room.Rect, room.Doors));
         }
 
-        foreach (var room in SpacesOfKind(CareSpaceKind.Waiting))
+        foreach (var room in SpacesOfKind(RoomKind.Waiting))
         {
             if (DeskOf(room) is { } desk)
             {
@@ -591,10 +591,10 @@ public sealed partial class SchoolSimulation
             var walled = _spaces.Values.FirstOrDefault(s => s.HasWalls && s.Rect.Contains(t));
             if (walled is not null)
             {
-                return walled.Kind == CareSpaceKind.Waiting;
+                return walled.Kind == RoomKind.Waiting;
             }
 
-            return !inWaitingRoom && _spaces.Values.Any(s => s.Kind == CareSpaceKind.Corridor && s.Rect.Contains(t));
+            return !inWaitingRoom && _spaces.Values.Any(s => s.Kind == RoomKind.Corridor && s.Rect.Contains(t));
         }
 
         // Walk outwards from the target over open floor and take the first clear tile at least a step away.
@@ -633,7 +633,7 @@ public sealed partial class SchoolSimulation
     /// Builds a reception by the main entrance, with its desk, doors and seats, and the corridors it opens onto.
     /// Used by tests and the smoke test; a new game starts without one. Free of charge.
     /// </summary>
-    public CareSpace BuildStarterWaitingRoom()
+    public Room BuildStarterWaitingRoom()
     {
         var o = new GridCoord(MainBuilding.Footprint.X, MainBuilding.Footprint.Y);
 
@@ -666,12 +666,12 @@ public sealed partial class SchoolSimulation
     /// Turns a waiting room laid out the old way (desk, seats and doors all automatic) into one the player has fitted:
     /// the same desk and doors, and its seats as placed chairs. Used for old saves and the starter waiting room.
     /// </summary>
-    private (CareSpace Room, List<PlacedChair> Chairs) UpgradeOldWaitingRoom(RoomPlan plan, string id, string name)
+    private (Room Room, List<PlacedChair> Chairs) UpgradeOldWaitingRoom(RoomPlan plan, string id, string name)
     {
         var template = Database.RoomTemplates[plan.TemplateId];
         var old = RoomLayoutEngine.Build(template, Database, id, name, plan.Rect, plan.DoorSide, plan.DoorStart, plan.DoorRun, StreetDoors(plan.Rect));
         var (sx, sy) = (old.StaffSpot.X, old.StaffSpot.Y);
-        var (px, py) = (old.PatientSpot.X, old.PatientSpot.Y);
+        var (px, py) = (old.UseSpot.X, old.UseSpot.Y);
         var facing = Math.Abs(px - sx) >= Math.Abs(py - sy)
             ? (px > sx ? WallSide.East : WallSide.West)
             : (py > sy ? WallSide.South : WallSide.North);
@@ -679,7 +679,6 @@ public sealed partial class SchoolSimulation
         var fittings = new WaitingFittings(desk, old.Doors.ToList());
         _fittings[id] = fittings;
         var room = RoomLayoutEngine.Build(template, Database, id, name, plan.Rect, plan.DoorSide, fittings: fittings);
-        room.AllowedDepartments.UnionWith(old.AllowedDepartments);
         var layout = DeskOf(room);
         var keepClear = WaitingRoomLayout.DoorTiles(room.Rect, room.Doors);
         var chairs = old.Seats

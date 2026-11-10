@@ -1,0 +1,184 @@
+[
+  {
+    "id": "english",
+    "name": "English",
+    "short_name": "En",
+    "department": "english",
+    "colour": "#C98A1E",
+    "core": true,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 4
+  },
+  {
+    "id": "maths",
+    "name": "Maths",
+    "short_name": "Ma",
+    "department": "maths",
+    "colour": "#2C6FB7",
+    "core": true,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 4
+  },
+  {
+    "id": "science",
+    "name": "Science",
+    "short_name": "Sc",
+    "department": "science",
+    "colour": "#2E9A9A",
+    "core": true,
+    "rooms": [
+      "science_lab"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 3
+  },
+  {
+    "id": "history",
+    "name": "History",
+    "short_name": "Hi",
+    "department": "humanities",
+    "colour": "#8C5C37",
+    "core": false,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 2
+  },
+  {
+    "id": "geography",
+    "name": "Geography",
+    "short_name": "Gg",
+    "department": "humanities",
+    "colour": "#5D8C3A",
+    "core": false,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 2
+  },
+  {
+    "id": "re",
+    "name": "Religious education",
+    "short_name": "RE",
+    "department": "humanities",
+    "colour": "#7A4FA3",
+    "core": false,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 1
+  },
+  {
+    "id": "french",
+    "name": "French",
+    "short_name": "Fr",
+    "department": "languages",
+    "colour": "#A23B86",
+    "core": false,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 2
+  },
+  {
+    "id": "spanish",
+    "name": "Spanish",
+    "short_name": "Sp",
+    "department": "languages",
+    "colour": "#C2557A",
+    "core": false,
+    "rooms": [],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 0
+  },
+  {
+    "id": "computing",
+    "name": "Computing",
+    "short_name": "Co",
+    "department": "computing",
+    "colour": "#37474F",
+    "core": false,
+    "rooms": [
+      "ict_suite"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 1
+  },
+  {
+    "id": "art",
+    "name": "Art and design",
+    "short_name": "Ar",
+    "department": "arts",
+    "colour": "#C0392B",
+    "core": false,
+    "rooms": [
+      "art_room"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 1
+  },
+  {
+    "id": "music",
+    "name": "Music",
+    "short_name": "Mu",
+    "department": "arts",
+    "colour": "#6A4C93",
+    "core": false,
+    "rooms": [
+      "music_room"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 1
+  },
+  {
+    "id": "drama",
+    "name": "Drama",
+    "short_name": "Dr",
+    "department": "arts",
+    "colour": "#2B2F36",
+    "core": false,
+    "rooms": [
+      "drama_studio",
+      "sports_hall"
+    ],
+    "needs_specialist_room": false,
+    "ks3_periods_per_week": 1
+  },
+  {
+    "id": "dt",
+    "name": "Design and technology",
+    "short_name": "DT",
+    "department": "technology",
+    "colour": "#827717",
+    "core": false,
+    "rooms": [
+      "dt_workshop"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 1
+  },
+  {
+    "id": "food",
+    "name": "Food and nutrition",
+    "short_name": "Fo",
+    "department": "technology",
+    "colour": "#D9822B",
+    "core": false,
+    "rooms": [
+      "food_room"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 0
+  },
+  {
+    "id": "pe",
+    "name": "Physical education",
+    "short_name": "PE",
+    "department": "pe",
+    "colour": "#1E6B47",
+    "core": false,
+    "rooms": [
+      "sports_hall"
+    ],
+    "needs_specialist_room": true,
+    "ks3_periods_per_week": 2
+  }
+]

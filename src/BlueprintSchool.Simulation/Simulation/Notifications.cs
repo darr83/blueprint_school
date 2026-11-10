@@ -16,7 +16,7 @@ public sealed record Notification(
     NotificationLevel Level,
     string Text,
     int? PersonId = null,
-    string? CareSpaceId = null) : IGameEvent;
+    string? RoomId = null) : IGameEvent;
 
 /// <summary>Keeps the most recent notifications and publishes each one on the event bus.</summary>
 public sealed class NotificationLog(EventBus events, int capacity = 200)

@@ -165,7 +165,7 @@ public partial class RecruitmentPanel : PanelContainer
     private void RefreshCandidates()
     {
         var candidates = _sim.Candidates.ToList();
-        var postingsSignature = string.Join(",", _sim.Spaces.Where(s => s.IsWard || s.IsServiceRoom).Select(s => s.Id + s.Name));
+        var postingsSignature = string.Join(",", _sim.Spaces.Where(s => s.IsTeachingRoom).Select(s => s.Id + s.Name));
         var signature = string.Join("|", candidates.Select(c => c.Id)) + postingsSignature;
         if (signature == _candidatesSignature)
         {

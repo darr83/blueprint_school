@@ -7,7 +7,7 @@ public partial class NavIcon : Control
 {
     public enum Kind
     {
-        Hospital,
+        School,
         Build,
         Patients,
         Staff,
@@ -43,11 +43,11 @@ public partial class NavIcon : Control
 
         switch (_kind)
         {
-            case Kind.Hospital:
+            case Kind.School:
                 DrawPolyline(new[] { new Vector2(5, 21), new Vector2(5, 8), new Vector2(12, 4), new Vector2(19, 8), new Vector2(19, 21) }, c, w, true);
                 L(3, 21, 21, 21);
-                L(9, 12, 15, 12);
-                L(12, 9, 12, 15);
+                Box(10, 15, 4, 6);
+                DrawArc(new Vector2(12, 10), 2, 0, Mathf.Tau, 16, c, w, true);
                 break;
             case Kind.Build:
                 Box(3, 3, 8, 8);

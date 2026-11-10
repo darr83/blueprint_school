@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BlueprintSchool.Hospital;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.School;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 using Godot;
@@ -25,7 +25,7 @@ public partial class RoomPanel : PanelContainer
     private double _refresh;
 
     /// <summary>Raised when the player wants to move or resize the room.</summary>
-    public event Action<CareSpace>? MoveRequested;
+    public event Action<Room>? MoveRequested;
 
     public string? RoomId => _roomId;
 
@@ -78,7 +78,7 @@ public partial class RoomPanel : PanelContainer
         _demolish.Pressed += Demolish;
     }
 
-    public void Show(CareSpace room)
+    public void Show(Room room)
     {
         _roomId = room.Id;
         _name.Text = room.Name;
@@ -124,10 +124,10 @@ public partial class RoomPanel : PanelContainer
 
         var check = _sim.CheckDemolish(room.Id);
         _demolish.Text = $"Demolish (+£{-check.Cost:N0})";
-        _move.Visible = room.Kind != CareSpaceKind.Corridor;
+        _move.Visible = room.Kind != RoomKind.Corridor;
     }
 
-    private string Usage(CareSpace room)
+    private string Usage(Room room)
     {
         if (room.ReservedByStaffId is { } staffId && _sim.FindStaff(staffId) is { } member)
         {
@@ -137,9 +137,9 @@ public partial class RoomPanel : PanelContainer
         var inside = _sim.Staff.Count(s => s.IsInBuilding && room.Rect.Contains(s.Tile));
         return room.Kind switch
         {
-            CareSpaceKind.Corridor => "Corridor",
+            RoomKind.Corridor => "Corridor",
             _ when inside > 0 => $"{inside} {(inside == 1 ? "person" : "people")} here",
-            _ when room.IsTreatmentSpace => "Free",
+            _ when room.IsTeachingRoom => $"Free · {room.Seats.Count} seats",
             _ => "Empty",
         };
     }

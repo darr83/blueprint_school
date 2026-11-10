@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
@@ -23,20 +23,20 @@ public class WaitingRoomTests
     private static readonly GridCoord DeskTile = new(B.X + 30, B.Y + 32);
 
     /// <summary>A new school with the main corridor, a link down to the front, and an empty reception built in the usual place.</summary>
-    private static (SimulationHarness H, CareSpace Room) EmptyWaitingRoom(int seed = 1234)
+    private static (SimulationHarness H, Room Room) EmptyWaitingRoom(int seed = 1234)
     {
         var h = new SimulationHarness(seed, waitingRoom: false);
-        Assert.Empty(h.Sim.SpacesOfKind(CareSpaceKind.Waiting));
+        Assert.Empty(h.Sim.SpacesOfKind(RoomKind.Waiting));
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 4, B.Y + 9, 56, 8), WallSide.South)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 22, B.Y + 17, 8, 9), WallSide.South)).CanBuild);
         var plan = h.Sim.AutoPlan("waiting_room", Spot);
         var check = h.Sim.BuildRoom(plan);
         Assert.True(check.CanBuild, string.Join("; ", check.Problems));
-        return (h, h.Sim.SpacesOfKind(CareSpaceKind.Waiting).Single());
+        return (h, h.Sim.SpacesOfKind(RoomKind.Waiting).Single());
     }
 
     /// <summary>Puts the desk and both doors into a waiting room in the usual place.</summary>
-    internal static void FitOut(SimulationHarness h, CareSpace room)
+    internal static void FitOut(SimulationHarness h, Room room)
     {
         var desk = h.Sim.PlaceReceptionDesk(room.Id, DeskTile, WallSide.South);
         Assert.True(desk.CanBuild, string.Join("; ", desk.Problems));
@@ -46,13 +46,13 @@ public class WaitingRoomTests
         Assert.True(inner.CanBuild, string.Join("; ", inner.Problems));
     }
 
-    private static CareSpace Room(SimulationHarness h) => h.Sim.SpacesOfKind(CareSpaceKind.Waiting).Single();
+    private static Room Room(SimulationHarness h) => h.Sim.SpacesOfKind(RoomKind.Waiting).Single();
 
     [Fact]
     public void A_new_game_has_no_reception()
     {
         var h = new SimulationHarness(waitingRoom: false);
-        Assert.Empty(h.Sim.SpacesOfKind(CareSpaceKind.Waiting));
+        Assert.Empty(h.Sim.SpacesOfKind(RoomKind.Waiting));
         Assert.Null(h.Sim.MainWaitingRoom);
     }
 
@@ -121,7 +121,7 @@ public class WaitingRoomTests
         var before = h.Sim.Balance;
         Assert.True(h.Sim.PlaceReceptionDesk(room.Id, new GridCoord(Spot.X + 6, Spot.Y + 6), WallSide.East).CanBuild);
         Assert.Equal(before, h.Sim.Balance);
-        Assert.Equal(new GridCoord(Spot.X + 7, Spot.Y + 6), Room(h).PatientSpot);
+        Assert.Equal(new GridCoord(Spot.X + 7, Spot.Y + 6), Room(h).UseSpot);
     }
 
     [Fact]
@@ -139,7 +139,7 @@ public class WaitingRoomTests
         Assert.Contains(h.Sim.CheckChair(room.QueueTiles[1], WallSide.South, colour).Problems, p => p.Contains("reception desk"));
         Assert.Contains(h.Sim.CheckChair(new GridCoord(EntranceTile.X, EntranceTile.Y), WallSide.South, colour).Problems, p => p.Contains("doorway"));
         Assert.Contains(h.Sim.CheckChair(new GridCoord(InnerDoorTile.X, InnerDoorTile.Y - 1), WallSide.South, colour).Problems, p => p.Contains("doorway"));
-        var staffRoom = h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
+        var staffRoom = h.Sim.SpacesOfKind(RoomKind.StaffRoom).Single();
         Assert.Contains(h.Sim.CheckChair(new GridCoord(staffRoom.Rect.X + 2, staffRoom.Rect.Y + 2), WallSide.South, colour).Problems, p => p.Contains("waiting room or along a corridor"));
 
         // A new chair lines up with the one beside it; next to a wall it has its back to the wall.
@@ -190,7 +190,7 @@ public class WaitingRoomTests
         var room = Room(h);
         Assert.Same(room, h.Sim.MainWaitingRoom);
         Assert.Empty(h.Sim.WaitingRoomProblems(room));
-        Assert.Equal(2, h.Sim.SpacesOfKind(CareSpaceKind.Corridor).Count());
+        Assert.Equal(2, h.Sim.SpacesOfKind(RoomKind.Corridor).Count());
         Assert.NotEmpty(h.Sim.Chairs);
     }
 }

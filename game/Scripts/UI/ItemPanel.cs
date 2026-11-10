@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using BlueprintSchool.Simulation.Data.Models;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 using Godot;
@@ -21,10 +21,10 @@ public partial class ItemPanel : PanelContainer
     private double _refresh;
 
     /// <summary>Raised when the player wants the whole room (build mode).</summary>
-    public event Action<CareSpace>? RoomRequested;
+    public event Action<Room>? RoomRequested;
 
     /// <summary>The room the item stands in.</summary>
-    public CareSpace? Room { get; private set; }
+    public Room? Room { get; private set; }
 
     public PlacedFurniture? Item { get; private set; }
 
@@ -89,7 +89,7 @@ public partial class ItemPanel : PanelContainer
     }
 
     /// <summary>Shows a piece of furniture or equipment (build mode).</summary>
-    public void ShowItem(CareSpace room, PlacedFurniture item)
+    public void ShowItem(Room room, PlacedFurniture item)
     {
         Room = room;
         Item = item;
@@ -135,7 +135,7 @@ public partial class ItemPanel : PanelContainer
         {
             var tile = chair.Tile;
             var who = _sim.Staff.FirstOrDefault(m => m.Tile == tile && !m.IsMoving)?.Name ?? "Free";
-            var where = room.Kind == CareSpaceKind.Corridor ? "anyone waiting nearby" : "visitors waiting at reception";
+            var where = room.Kind == RoomKind.Corridor ? "anyone waiting nearby" : "visitors waiting at reception";
             _title.Text = "Waiting chair";
             _info.Text = $"{muted}In[/color]  {room.Name}\n{muted}For[/color]  {where}\n{muted}Faces[/color]  {chair.Facing.ToString().ToLowerInvariant()} · {ChairColours.NameOf(chair.Colour)}\n{muted}Sitting here[/color]  {who}";
             _action.Text = $"Remove chair (refund £{_sim.ChairCost / 2:N0})";

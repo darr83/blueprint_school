@@ -1,0 +1,575 @@
+[
+  {
+    "id": "english_classroom",
+    "name": "English classroom",
+    "category": "Teaching",
+    "description": "A classroom for the English department, with its posters and a reading corner.",
+    "kind": "classroom",
+    "department": "english",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 7,
+        "length_m": 6.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 8.5,
+        "length_m": 7.5
+      },
+      {
+        "name": "Large",
+        "width_m": 9.5,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 5,
+    "min_length_m": 5,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 8000,
+    "cost_per_square_metre": 900,
+    "staffing": "One teacher per lesson.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "pupil_desk",
+      "pupil_chair",
+      "storage_cupboard"
+    ],
+    "max_pupils": 32
+  },
+  {
+    "id": "maths_classroom",
+    "name": "Maths classroom",
+    "category": "Teaching",
+    "description": "A classroom for the Maths department.",
+    "kind": "classroom",
+    "department": "maths",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 7,
+        "length_m": 6.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 8.5,
+        "length_m": 7.5
+      },
+      {
+        "name": "Large",
+        "width_m": 9.5,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 5,
+    "min_length_m": 5,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 8000,
+    "cost_per_square_metre": 900,
+    "staffing": "One teacher per lesson.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "pupil_desk",
+      "pupil_chair",
+      "storage_cupboard"
+    ],
+    "max_pupils": 32
+  },
+  {
+    "id": "humanities_classroom",
+    "name": "Humanities classroom",
+    "category": "Teaching",
+    "description": "A classroom for history, geography and RE.",
+    "kind": "classroom",
+    "department": "humanities",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 7,
+        "length_m": 6.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 8.5,
+        "length_m": 7.5
+      },
+      {
+        "name": "Large",
+        "width_m": 9.5,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 5,
+    "min_length_m": 5,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 8000,
+    "cost_per_square_metre": 900,
+    "staffing": "One teacher per lesson.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "pupil_desk",
+      "pupil_chair",
+      "storage_cupboard"
+    ],
+    "max_pupils": 32
+  },
+  {
+    "id": "languages_classroom",
+    "name": "Languages classroom",
+    "category": "Teaching",
+    "description": "A classroom for French and Spanish.",
+    "kind": "classroom",
+    "department": "languages",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 7,
+        "length_m": 6.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 8.5,
+        "length_m": 7.5
+      },
+      {
+        "name": "Large",
+        "width_m": 9.5,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 5,
+    "min_length_m": 5,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 8000,
+    "cost_per_square_metre": 900,
+    "staffing": "One teacher per lesson.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "pupil_desk",
+      "pupil_chair",
+      "storage_cupboard"
+    ],
+    "max_pupils": 32
+  },
+  {
+    "id": "science_lab",
+    "name": "Science lab",
+    "category": "Science",
+    "description": "Lab benches with gas taps for practical work, a fume cupboard and a sink. Practicals need a prep room and a lab technician.",
+    "kind": "science_lab",
+    "department": "science",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 8,
+        "length_m": 7
+      },
+      {
+        "name": "Standard",
+        "width_m": 9,
+        "length_m": 8
+      },
+      {
+        "name": "Large",
+        "width_m": 10,
+        "length_m": 9
+      }
+    ],
+    "min_width_m": 6,
+    "min_length_m": 6,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 25000,
+    "cost_per_square_metre": 1400,
+    "staffing": "A science teacher, with a lab technician for practicals.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "lab_bench",
+      "pupil_chair",
+      "fume_cupboard",
+      "hand_basin",
+      "storage_cupboard"
+    ],
+    "max_pupils": 30
+  },
+  {
+    "id": "prep_room",
+    "name": "Prep room",
+    "category": "Science",
+    "description": "Where the lab technician gets practicals ready and keeps the chemicals and kit.",
+    "kind": "prep_room",
+    "department": "science",
+    "layout": "office",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 4,
+        "length_m": 3.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 5,
+        "length_m": 4
+      }
+    ],
+    "min_width_m": 3,
+    "min_length_m": 3,
+    "max_width_m": 8,
+    "max_length_m": 6,
+    "door_width_m": 1.0,
+    "base_cost": 6000,
+    "cost_per_square_metre": 1000,
+    "staffing": "A lab technician.",
+    "furniture": [
+      "lab_bench",
+      "staff_chair",
+      "fume_cupboard",
+      "storage_cupboard",
+      "hand_basin"
+    ]
+  },
+  {
+    "id": "ict_suite",
+    "name": "Computer suite",
+    "category": "Computing",
+    "description": "Rows of computers for computing lessons. Computers break, so an IT technician helps.",
+    "kind": "ict_suite",
+    "department": "computing",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 7,
+        "length_m": 6.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 8.5,
+        "length_m": 7.5
+      },
+      {
+        "name": "Large",
+        "width_m": 9.5,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 5,
+    "min_length_m": 5,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 15000,
+    "cost_per_square_metre": 1000,
+    "staffing": "A computing teacher, with an IT technician.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "computer_desk",
+      "pupil_chair",
+      "storage_cupboard"
+    ],
+    "max_pupils": 30
+  },
+  {
+    "id": "art_room",
+    "name": "Art room",
+    "category": "Arts",
+    "description": "Big tables for painting and making, a sink and a kiln for pottery.",
+    "kind": "art_room",
+    "department": "arts",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 8,
+        "length_m": 7
+      },
+      {
+        "name": "Standard",
+        "width_m": 9,
+        "length_m": 8
+      },
+      {
+        "name": "Large",
+        "width_m": 10,
+        "length_m": 9
+      }
+    ],
+    "min_width_m": 6,
+    "min_length_m": 6,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 9000,
+    "cost_per_square_metre": 950,
+    "staffing": "An art teacher.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "art_table",
+      "pupil_chair",
+      "kiln",
+      "hand_basin",
+      "storage_cupboard"
+    ],
+    "max_pupils": 30
+  },
+  {
+    "id": "music_room",
+    "name": "Music room",
+    "category": "Arts",
+    "description": "Keyboards for the whole class and a piano.",
+    "kind": "music_room",
+    "department": "arts",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 7,
+        "length_m": 6.5
+      },
+      {
+        "name": "Standard",
+        "width_m": 8.5,
+        "length_m": 7.5
+      },
+      {
+        "name": "Large",
+        "width_m": 9.5,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 5,
+    "min_length_m": 5,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 9000,
+    "cost_per_square_metre": 1000,
+    "staffing": "A music teacher.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "keyboard_desk",
+      "pupil_chair",
+      "piano",
+      "storage_cupboard"
+    ],
+    "max_pupils": 30
+  },
+  {
+    "id": "drama_studio",
+    "name": "Drama studio",
+    "category": "Arts",
+    "description": "A clear black floor with stage blocks round the edge.",
+    "kind": "drama_studio",
+    "department": "arts",
+    "layout": "hall",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 8,
+        "length_m": 7
+      },
+      {
+        "name": "Standard",
+        "width_m": 10,
+        "length_m": 8
+      },
+      {
+        "name": "Large",
+        "width_m": 12,
+        "length_m": 10
+      }
+    ],
+    "min_width_m": 6,
+    "min_length_m": 6,
+    "max_width_m": 16,
+    "max_length_m": 14,
+    "door_width_m": 2.0,
+    "base_cost": 8000,
+    "cost_per_square_metre": 900,
+    "staffing": "A drama teacher.",
+    "furniture": [
+      "stage_block",
+      "storage_cupboard"
+    ]
+  },
+  {
+    "id": "dt_workshop",
+    "name": "D&T workshop",
+    "category": "Technology",
+    "description": "Workbenches with vices and a pillar drill. Too many pupils in a workshop makes accidents more likely.",
+    "kind": "dt_workshop",
+    "department": "technology",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 8,
+        "length_m": 7
+      },
+      {
+        "name": "Standard",
+        "width_m": 9,
+        "length_m": 8
+      },
+      {
+        "name": "Large",
+        "width_m": 10,
+        "length_m": 9
+      }
+    ],
+    "min_width_m": 6,
+    "min_length_m": 6,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 2.0,
+    "base_cost": 20000,
+    "cost_per_square_metre": 1200,
+    "staffing": "A D&T teacher, with a technician.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "workbench",
+      "pupil_chair",
+      "pillar_drill",
+      "hand_basin",
+      "storage_cupboard"
+    ],
+    "max_pupils": 24
+  },
+  {
+    "id": "food_room",
+    "name": "Food room",
+    "category": "Technology",
+    "description": "Cooking stations with a hob, an oven and a sink each.",
+    "kind": "food_room",
+    "department": "technology",
+    "layout": "teaching",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 8,
+        "length_m": 7
+      },
+      {
+        "name": "Standard",
+        "width_m": 9,
+        "length_m": 8
+      }
+    ],
+    "min_width_m": 6,
+    "min_length_m": 6,
+    "max_width_m": 14,
+    "max_length_m": 12,
+    "door_width_m": 1.0,
+    "base_cost": 18000,
+    "cost_per_square_metre": 1200,
+    "staffing": "A food teacher.",
+    "furniture": [
+      "teacher_desk",
+      "staff_chair",
+      "cooking_station",
+      "pupil_chair",
+      "hand_basin",
+      "storage_cupboard"
+    ],
+    "max_pupils": 24
+  },
+  {
+    "id": "sports_hall",
+    "name": "Sports hall",
+    "category": "PE",
+    "description": "A big sprung floor with court lines, benches and mats. Used for PE, assemblies and exams.",
+    "kind": "sports_hall",
+    "department": "pe",
+    "layout": "hall",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 12,
+        "length_m": 8
+      },
+      {
+        "name": "Standard",
+        "width_m": 16,
+        "length_m": 10
+      },
+      {
+        "name": "Large",
+        "width_m": 20,
+        "length_m": 12
+      }
+    ],
+    "min_width_m": 8,
+    "min_length_m": 6,
+    "max_width_m": 30,
+    "max_length_m": 20,
+    "door_width_m": 3.0,
+    "base_cost": 40000,
+    "cost_per_square_metre": 1100,
+    "staffing": "A PE teacher per class.",
+    "furniture": [
+      "gym_bench",
+      "gym_mat",
+      "storage_cupboard"
+    ]
+  },
+  {
+    "id": "changing_room",
+    "name": "Changing room",
+    "category": "PE",
+    "description": "Benches and coat hooks for getting changed before and after PE.",
+    "kind": "changing_room",
+    "department": "pe",
+    "layout": "hall",
+    "sizes": [
+      {
+        "name": "Small",
+        "width_m": 4,
+        "length_m": 4
+      },
+      {
+        "name": "Standard",
+        "width_m": 5,
+        "length_m": 5
+      },
+      {
+        "name": "Large",
+        "width_m": 6,
+        "length_m": 6
+      }
+    ],
+    "min_width_m": 3,
+    "min_length_m": 3,
+    "max_width_m": 10,
+    "max_length_m": 8,
+    "door_width_m": 1.0,
+    "base_cost": 6000,
+    "cost_per_square_metre": 900,
+    "staffing": "None.",
+    "furniture": [
+      "changing_bench"
+    ]
+  }
+]

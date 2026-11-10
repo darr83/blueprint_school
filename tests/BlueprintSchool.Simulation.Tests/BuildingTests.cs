@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 
@@ -24,7 +24,7 @@ public class BuildingTests
                     var what = $"{template.Id} {size.Name} door {side}";
 
                     Assert.True(rect.Contains(room.StaffSpot), $"{what}: staff spot outside the room");
-                    Assert.True(rect.Contains(room.PatientSpot), $"{what}: visitor spot outside the room");
+                    Assert.True(rect.Contains(room.UseSpot), $"{what}: visitor spot outside the room");
                     Assert.All(room.Furniture, f => Assert.True(
                         f.X >= rect.X - 0.01 && f.Y >= rect.Y - 0.01 && f.X + f.Width <= rect.Right + 0.01 && f.Y + f.Length <= rect.Bottom + 0.01,
                         $"{what}: {f.ItemId} sticks out of the room"));
@@ -42,7 +42,7 @@ public class BuildingTests
     {
         var h = new SimulationHarness();
         var t = h.Database.RoomTemplates["waiting_room"];
-        CareSpace Make(double w, double l) => RoomLayoutEngine.Build(t, h.Database, "w", "W", RoomLayoutEngine.RectFor(new GridCoord(0, 0), Units.MetresToTiles(w), Units.MetresToTiles(l), WallSide.South), WallSide.South);
+        Room Make(double w, double l) => RoomLayoutEngine.Build(t, h.Database, "w", "W", RoomLayoutEngine.RectFor(new GridCoord(0, 0), Units.MetresToTiles(w), Units.MetresToTiles(l), WallSide.South), WallSide.South);
         Assert.True(Make(14, 9).Seats.Count > Make(8, 6).Seats.Count);
         Assert.NotEmpty(Make(8, 6).QueueTiles);
     }
@@ -97,7 +97,7 @@ public class BuildingTests
         var room = h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X - 10, B.Y, 8, 9), WallSide.South));
         Assert.True(room.CanBuild, string.Join("; ", room.Problems));
         Assert.Equal(start - extension.Cost - corridor.Cost - room.Cost, h.Sim.Balance);
-        Assert.Single(h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom));
+        Assert.Single(h.Sim.SpacesOfKind(RoomKind.StaffRoom));
     }
 
     [Fact]
@@ -106,7 +106,7 @@ public class BuildingTests
         var h = new SimulationHarness();
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X + 4, B.Y + 9, 56, 8), WallSide.South)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X + 4, B.Y, 8, 9), WallSide.South)).CanBuild);
-        var room = h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
+        var room = h.Sim.SpacesOfKind(RoomKind.StaffRoom).Single();
 
         room.ReservedByStaffId = 1;
         Assert.False(h.Sim.CheckDemolish(room.Id).CanBuild);
@@ -134,7 +134,7 @@ public class BuildingTests
         Assert.True(h.Sim.ExtendBuilding(new GridRect(B.X - 10, B.Y, 10, 20)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("corridor", new GridRect(B.X - 10, B.Y + 9, 14, 8), WallSide.South)).CanBuild);
         Assert.True(h.Sim.BuildRoom(new RoomPlan("staff_room", new GridRect(B.X - 10, B.Y, 8, 9), WallSide.South)).CanBuild);
-        var room = h.Sim.SpacesOfKind(CareSpaceKind.StaffRoom).Single();
+        var room = h.Sim.SpacesOfKind(RoomKind.StaffRoom).Single();
         h.Sim.RenameRoom(room.Id, "Staffroom A");
 
         var json = SaveSerializer.Serialize(new SaveGame { Layout = h.Sim.CaptureLayout() });

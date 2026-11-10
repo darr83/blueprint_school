@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using BlueprintSchool.Simulation.World;
@@ -45,7 +45,7 @@ public class DepartmentTests
         teacher.Breaks.Clear();
 
         h.RunFor(TimeSpan.FromMinutes(10));
-        var staffRoom = h.Sim.Spaces.Single(s => s.Kind == CareSpaceKind.StaffRoom);
+        var staffRoom = h.Sim.Spaces.Single(s => s.Kind == RoomKind.StaffRoom);
         Assert.True(staffRoom.Rect.Contains(teacher.Destination ?? teacher.Tile), $"{teacher.Name} is at {teacher.Tile}");
     }
 

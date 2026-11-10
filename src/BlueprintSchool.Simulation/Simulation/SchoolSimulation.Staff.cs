@@ -1,4 +1,4 @@
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Staff;
 
 namespace BlueprintSchool.Simulation.Simulation;
@@ -100,7 +100,7 @@ public sealed partial class SchoolSimulation
         }
 
         planned.TakenAt = Now;
-        var seats = SpacesOfKind(CareSpaceKind.StaffRoom).SelectMany(s => s.Seats).ToList();
+        var seats = SpacesOfKind(RoomKind.StaffRoom).SelectMany(s => s.Seats).ToList();
         var seat = seats.Count > 0 ? seats[(member.Id - 1) % seats.Count] : HomeTile(member);
         member.Activity = StaffActivity.WalkingToBreak;
         member.BreakEndsAt = Now + TimeSpan.FromMinutes(planned.Minutes);

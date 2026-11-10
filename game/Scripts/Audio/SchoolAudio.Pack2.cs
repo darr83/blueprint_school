@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BlueprintSchool.Hospital;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.School;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.Staff;
 using Godot;
@@ -31,12 +31,12 @@ public partial class SchoolAudio
             var r = space.Rect;
             var centre = IsoDraw.ToScreen(r.X + (r.Width / 2.0), r.Y + (r.Length / 2.0));
             var staffHere = sim.Staff.Count(s => !s.IsMoving && r.Contains(s.Tile));
-            if (space.Kind == CareSpaceKind.StaffRoom && sim.Staff.Any(s => s.Activity == StaffActivity.OnBreak && r.Contains(s.Tile)))
+            if (space.Kind == RoomKind.StaffRoom && sim.Staff.Any(s => s.Activity == StaffActivity.OnBreak && r.Contains(s.Tile)))
             {
                 Want($"staffroom:{space.Id}", "amb_staff_room", centre, Spatial(centre, zoom, 0.6, 1.3) * 0.5, AudioSettings.AmbienceBus);
             }
 
-            if (space.Kind == CareSpaceKind.StaffRoom && staffHere >= 2)
+            if (space.Kind == RoomKind.StaffRoom && staffHere >= 2)
             {
                 Everyso(space.Id + ":chat", 12, 30, () => PlayAt(_random.Next(2) == 0 ? "staff_chat_1" : "staff_chat_2", centre, Spatial(centre, zoom, 0.9, 1.5) * 0.5, AudioSettings.EffectsBus));
             }
@@ -54,7 +54,7 @@ public partial class SchoolAudio
         }
 
         _nextCorridorSound = _time + 35 + (_random.NextDouble() * 55);
-        var corridors = _session.Simulation.Spaces.Where(s => s.Kind == CareSpaceKind.Corridor).ToList();
+        var corridors = _session.Simulation.Spaces.Where(s => s.Kind == RoomKind.Corridor).ToList();
         if (corridors.Count == 0 || zoom < 0.9f || _session.Clock.IsPaused)
         {
             return;

@@ -1,5 +1,5 @@
 using BlueprintSchool.Simulation.Core;
-using BlueprintSchool.Simulation.Hospital;
+using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.Simulation.World;
 
@@ -9,7 +9,7 @@ public class DecorTests
 {
     private static readonly GridRect B = StarterSite.MainBuildingFootprint;
 
-    private static (SimulationHarness H, CareSpace Room) WithStaffRoom()
+    private static (SimulationHarness H, Room Room) WithStaffRoom()
     {
         var h = new SimulationHarness(mainCorridor: true);
         h.Sim.AdjustBalance(5_000_000);
@@ -23,7 +23,7 @@ public class DecorTests
     public void New_rooms_start_with_the_look_for_their_kind()
     {
         var (h, room) = WithStaffRoom();
-        Assert.Equal(DecorCatalogue.StartingLook(CareSpaceKind.StaffRoom), h.Sim.DecorOf(room));
+        Assert.Equal(DecorCatalogue.StartingLook(RoomKind.StaffRoom), h.Sim.DecorOf(room));
         Assert.Equal(FloorFinish.WoodPlanks, h.Sim.DecorOf(room).Floor);
     }
 
@@ -31,7 +31,7 @@ public class DecorTests
     public void Corridors_and_lifts_stay_standard()
     {
         var (h, _) = WithStaffRoom();
-        foreach (var space in h.Sim.Spaces.Where(s => s.Kind is CareSpaceKind.Corridor or CareSpaceKind.Lift or CareSpaceKind.Stairs))
+        foreach (var space in h.Sim.Spaces.Where(s => s.Kind is RoomKind.Corridor or RoomKind.Lift or RoomKind.Stairs))
         {
             Assert.True(h.Sim.DecorOf(space).IsStandard);
         }
