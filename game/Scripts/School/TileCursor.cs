@@ -54,7 +54,7 @@ public partial class TileCursor : Node2D
             Point(t.X, t.Y), Point(t.X + 1, t.Y), Point(t.X + 1, t.Y + 1), Point(t.X, t.Y + 1),
         };
         DrawColoredPolygon(corners, new Color(1, 1, 1, 0.25f));
-        DrawPolyline(new[] { corners[0], corners[1], corners[2], corners[3], corners[0] }, new Color("#005EB8"), 2f);
+        DrawPolyline(new[] { corners[0], corners[1], corners[2], corners[3], corners[0] }, new Color("#E3A92B"), 2f);
     }
 
     private Vector2 Point(double x, double y)

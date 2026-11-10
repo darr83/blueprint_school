@@ -23,7 +23,7 @@ public sealed class SubjectDefinition : IDataRecord
     /// <summary>English, Maths and Science: every pupil takes them all the way to GCSE.</summary>
     public bool Core { get; init; }
 
-    /// <summary>Room templates made for the subject, best first. Empty if a general classroom is all it needs.</summary>
+    /// <summary>Room templates made for the subject, best first. A general classroom will always do unless <see cref="NeedsSpecialistRoom"/>.</summary>
     public IReadOnlyList<string> Rooms { get; init; } = Array.Empty<string>();
 
     /// <summary>True if lessons out of one of <see cref="Rooms"/> are weaker (practical subjects).</summary>

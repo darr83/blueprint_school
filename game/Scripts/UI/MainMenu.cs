@@ -13,7 +13,7 @@ public partial class MainMenu : Control
         var manager = GameManager.Instance;
 
         AddChild(new ColorRect { Color = UiStyle.Ground, AnchorRight = 1, AnchorBottom = 1 });
-        AddChild(new ColorRect { Color = UiStyle.NhsBlue, AnchorRight = 1, OffsetBottom = 10 });
+        AddChild(new ColorRect { Color = UiStyle.Primary, AnchorRight = 1, OffsetBottom = 10 });
 
         var centre = new CenterContainer { AnchorRight = 1, AnchorBottom = 1 };
         AddChild(centre);

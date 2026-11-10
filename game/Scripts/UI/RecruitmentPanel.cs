@@ -145,7 +145,7 @@ public partial class RecruitmentPanel : PanelContainer
 
                 var text = $"{StaffGrades.RoleName(role.Key, plural: recommended != 1)}: {string.Join(" · ", parts)}";
                 var isShort = role.Any(n => n.Short > 0);
-                HudWidgets.SetChip(chip, text, isShort ? UiStyle.AmberTint : UiStyle.BlueTint);
+                HudWidgets.SetChip(chip, text, isShort ? UiStyle.AmberTint : UiStyle.PrimaryTint);
                 if (isShort)
                 {
                     chip.Text.AddThemeColorOverride("font_color", UiStyle.AmberText);

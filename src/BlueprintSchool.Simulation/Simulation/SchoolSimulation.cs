@@ -92,6 +92,7 @@ public sealed partial class SchoolSimulation
             member.Move(dt);
         }
 
+        RingBells();
         UpdateGeneralAnnouncements();
         UpdateToilets(dt);
         UpdateStaff(dt);

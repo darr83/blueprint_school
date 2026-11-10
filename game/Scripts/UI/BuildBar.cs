@@ -414,7 +414,7 @@ public partial class BuildBar : Control
         foreach (var state in new[] { "normal", "hover", "pressed", "hover_pressed", "disabled" })
         {
             var selected = state is "pressed" or "hover_pressed";
-            var box = UiStyle.Box(selected ? new Color("#F5F9FE") : UiStyle.Surface, 12, selected ? UiStyle.Blue : state == "hover" ? new Color("#9DB6DA") : UiStyle.Border);
+            var box = UiStyle.Box(selected ? new Color("#F5F9FE") : UiStyle.Surface, 12, selected ? UiStyle.Primary : state == "hover" ? new Color("#9DB6DA") : UiStyle.Border);
             if (selected)
             {
                 box.BorderWidthBottom = box.BorderWidthTop = box.BorderWidthLeft = box.BorderWidthRight = 2;
@@ -465,9 +465,9 @@ public partial class BuildBar : Control
         {
             var tag = new Label { Text = "SHARED", MouseFilter = MouseFilterEnum.Ignore };
             tag.AddThemeFontSizeOverride("font_size", 9);
-            tag.AddThemeColorOverride("font_color", UiStyle.Blue);
+            tag.AddThemeColorOverride("font_color", UiStyle.Primary);
             var chip = new PanelContainer { MouseFilter = MouseFilterEnum.Ignore };
-            var box = UiStyle.Box(UiStyle.BlueTint, 4);
+            var box = UiStyle.Box(UiStyle.PrimaryTint, 4);
             box.ContentMarginLeft = box.ContentMarginRight = 4;
             chip.AddThemeStyleboxOverride("panel", box);
             chip.AddChild(tag);
@@ -906,7 +906,7 @@ public partial class BuildBar : Control
             var hovered = GetGlobalRect().HasPoint(GetGlobalMousePosition());
             if (open)
             {
-                var box = UiStyle.Box(UiStyle.BlueTint, 10, UiStyle.Blue);
+                var box = UiStyle.Box(UiStyle.PrimaryTint, 10, UiStyle.Primary);
                 box.BorderWidthBottom = box.BorderWidthTop = box.BorderWidthLeft = box.BorderWidthRight = 2;
                 DrawStyleBox(box, new Rect2(Vector2.Zero, size));
             }

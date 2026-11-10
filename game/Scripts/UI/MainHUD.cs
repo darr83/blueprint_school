@@ -23,6 +23,7 @@ public partial class MainHUD : CanvasLayer
 
     private readonly Label _dateLabel = UiStyle.Caption(string.Empty, 12);
     private readonly Label _timeLabel = new();
+    private readonly BellTimeline _bells = new() { SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
     private readonly Label _hoverLabel = new();
     private readonly Label _tagLabel = new();
     private readonly PanelContainer _tag = new() { MouseFilter = Control.MouseFilterEnum.Ignore, Visible = false };
@@ -371,7 +372,7 @@ public partial class MainHUD : CanvasLayer
         var brand = new HBoxContainer { CustomMinimumSize = new Vector2(250, 0) };
         brand.AddThemeConstantOverride("separation", 10);
         var logo = new PanelContainer { CustomMinimumSize = new Vector2(32, 32), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
-        logo.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Blue, 8));
+        logo.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Primary, 8));
         var cross = new Label { Text = "+", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         cross.AddThemeColorOverride("font_color", Colors.White);
         cross.AddThemeFontSizeOverride("font_size", 26);
@@ -399,6 +400,7 @@ public partial class MainHUD : CanvasLayer
         _timeLabel.CustomMinimumSize = new Vector2(52, 0);
         _timeLabel.VerticalAlignment = VerticalAlignment.Center;
         clockRow.AddChild(_timeLabel);
+        clockRow.AddChild(_bells);
         var speeds = new PanelContainer();
         var speedsStyle = UiStyle.Box(UiStyle.Surface, 8, UiStyle.Border);
         speedsStyle.ContentMarginLeft = speedsStyle.ContentMarginRight = speedsStyle.ContentMarginTop = speedsStyle.ContentMarginBottom = 2;
@@ -465,8 +467,8 @@ public partial class MainHUD : CanvasLayer
         };
         button.AddThemeStyleboxOverride("normal", UiStyle.Box(new Color(0, 0, 0, 0), 6));
         button.AddThemeStyleboxOverride("hover", UiStyle.Box(UiStyle.Surface, 6));
-        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Blue, 6));
-        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.BlueHover, 6));
+        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Primary, 6));
+        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.PrimaryHover, 6));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_focus_color" })
         {
             button.AddThemeColorOverride(state, UiStyle.TextDark);
@@ -496,8 +498,8 @@ public partial class MainHUD : CanvasLayer
         };
         button.AddThemeStyleboxOverride("normal", UiStyle.Box(new Color(0, 0, 0, 0), 6));
         button.AddThemeStyleboxOverride("hover", UiStyle.Box(UiStyle.Ground, 6));
-        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Blue, 6));
-        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.BlueHover, 6));
+        button.AddThemeStyleboxOverride("pressed", UiStyle.Box(UiStyle.Primary, 6));
+        button.AddThemeStyleboxOverride("hover_pressed", UiStyle.Box(UiStyle.PrimaryHover, 6));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_focus_color" })
         {
             button.AddThemeColorOverride(state, UiStyle.TextDark);
@@ -619,7 +621,7 @@ public partial class MainHUD : CanvasLayer
         _floorUp.AddThemeFontSizeOverride("font_size", 15);
         _mapControls.AddChild(_floorUp);
         var floorCard = new PanelContainer { CustomMinimumSize = new Vector2(44, 34), MouseFilter = Control.MouseFilterEnum.Pass };
-        var floorBox = UiStyle.Box(UiStyle.Blue, 8);
+        var floorBox = UiStyle.Box(UiStyle.Primary, 8);
         floorCard.AddThemeStyleboxOverride("panel", floorBox);
         _floorLabel.AddThemeColorOverride("font_color", Colors.White);
         _floorLabel.AddThemeFontSizeOverride("font_size", 18);
@@ -661,7 +663,7 @@ public partial class MainHUD : CanvasLayer
 
     private Control BuildTag()
     {
-        var box = UiStyle.Box(UiStyle.Blue, 8);
+        var box = UiStyle.Box(UiStyle.Primary, 8);
         box.ContentMarginLeft = box.ContentMarginRight = 10;
         box.ContentMarginTop = box.ContentMarginBottom = 4;
         box.ShadowColor = new Color(0.09f, 0.14f, 0.18f, 0.25f);
@@ -747,6 +749,7 @@ public partial class MainHUD : CanvasLayer
         var now = _session.Clock.Now;
         _dateLabel.Text = now.ToString("dddd d MMMM yyyy");
         _timeLabel.Text = now.ToString("HH:mm");
+        _bells.Show(_session.Simulation.Database.Bells, now);
     }
 
     private static string Describe(TileKind kind) => kind switch

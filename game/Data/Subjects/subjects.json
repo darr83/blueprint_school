@@ -6,7 +6,9 @@
     "department": "english",
     "colour": "#C98A1E",
     "core": true,
-    "rooms": [],
+    "rooms": [
+      "english_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 4
   },
@@ -17,7 +19,9 @@
     "department": "maths",
     "colour": "#2C6FB7",
     "core": true,
-    "rooms": [],
+    "rooms": [
+      "maths_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 4
   },
@@ -41,7 +45,9 @@
     "department": "humanities",
     "colour": "#8C5C37",
     "core": false,
-    "rooms": [],
+    "rooms": [
+      "humanities_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 2
   },
@@ -52,7 +58,9 @@
     "department": "humanities",
     "colour": "#5D8C3A",
     "core": false,
-    "rooms": [],
+    "rooms": [
+      "humanities_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 2
   },
@@ -63,7 +71,9 @@
     "department": "humanities",
     "colour": "#7A4FA3",
     "core": false,
-    "rooms": [],
+    "rooms": [
+      "humanities_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 1
   },
@@ -74,7 +84,9 @@
     "department": "languages",
     "colour": "#A23B86",
     "core": false,
-    "rooms": [],
+    "rooms": [
+      "languages_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 2
   },
@@ -85,7 +97,9 @@
     "department": "languages",
     "colour": "#C2557A",
     "core": false,
-    "rooms": [],
+    "rooms": [
+      "languages_classroom"
+    ],
     "needs_specialist_room": false,
     "ks3_periods_per_week": 0
   },

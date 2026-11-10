@@ -5,13 +5,15 @@ namespace BlueprintSchool.UI;
 /// <summary>Shared look for all interface screens: one theme and a few layout helpers.</summary>
 public static class UiStyle
 {
-    // "Clinical light": white surfaces, one clear blue, plain dark text.
-    public static readonly Color Blue = new("#1F5FBF");
-    public static readonly Color BlueHover = new("#2A6FD6");
-    public static readonly Color BluePressed = new("#174A94");
-    public static readonly Color BlueTint = new("#E6EEFA");
+    // "School light": paper-white surfaces, bottle green with a gold accent, plain dark text.
+    public static readonly Color Primary = new("#1E6B47");
+    public static readonly Color PrimaryHover = new("#26845A");
+    public static readonly Color PrimaryPressed = new("#154A33");
+    public static readonly Color PrimaryTint = new("#E4F1EA");
+    public static readonly Color Gold = new("#E3A92B");
+    public static readonly Color Maroon = new("#8E2B3A");
     public static readonly Color Surface = Colors.White;
-    public static readonly Color Ground = new("#F2F5F8");
+    public static readonly Color Ground = new("#F6F8F5");
     public static readonly Color Border = new("#D9E1E8");
     public static readonly Color TextDark = new("#17232E");
     public static readonly Color TextMuted = new("#5B6B79");
@@ -22,8 +24,6 @@ public static class UiStyle
     public static readonly Color AmberBorder = new("#F0C878");
 
     // Older names, kept so every screen picks up the new look.
-    public static readonly Color NhsBlue = Blue;
-    public static readonly Color DarkBlue = BluePressed;
     public static readonly Color PanelBackground = Surface;
     public static readonly Color TopBarBackground = Surface;
 
@@ -69,10 +69,10 @@ public static class UiStyle
         var theme = new Theme { DefaultFontSize = 16 };
         theme.SetStylebox("panel", "PanelContainer", Card(24));
 
-        theme.SetStylebox("normal", "Button", ButtonBox(Blue));
-        theme.SetStylebox("hover", "Button", ButtonBox(BlueHover));
-        theme.SetStylebox("pressed", "Button", ButtonBox(BluePressed));
-        theme.SetStylebox("hover_pressed", "Button", ButtonBox(BluePressed));
+        theme.SetStylebox("normal", "Button", ButtonBox(Primary));
+        theme.SetStylebox("hover", "Button", ButtonBox(PrimaryHover));
+        theme.SetStylebox("pressed", "Button", ButtonBox(PrimaryPressed));
+        theme.SetStylebox("hover_pressed", "Button", ButtonBox(PrimaryPressed));
         theme.SetStylebox("focus", "Button", new StyleBoxEmpty());
         theme.SetStylebox("disabled", "Button", ButtonBox(new Color("#C3CCD4")));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color", "font_focus_color" })
@@ -85,8 +85,8 @@ public static class UiStyle
         theme.SetTypeVariation(Secondary, "Button");
         theme.SetStylebox("normal", Secondary, ButtonBox(Surface, Border));
         theme.SetStylebox("hover", Secondary, ButtonBox(Ground, Border));
-        theme.SetStylebox("pressed", Secondary, ButtonBox(BlueTint, Blue));
-        theme.SetStylebox("hover_pressed", Secondary, ButtonBox(BlueTint, Blue));
+        theme.SetStylebox("pressed", Secondary, ButtonBox(PrimaryTint, Primary));
+        theme.SetStylebox("hover_pressed", Secondary, ButtonBox(PrimaryTint, Primary));
         theme.SetStylebox("focus", Secondary, new StyleBoxEmpty());
         theme.SetStylebox("disabled", Secondary, ButtonBox(Ground, Border));
         foreach (var state in new[] { "font_color", "font_hover_color", "font_focus_color" })
@@ -94,24 +94,24 @@ public static class UiStyle
             theme.SetColor(state, Secondary, TextDark);
         }
 
-        theme.SetColor("font_pressed_color", Secondary, Blue);
-        theme.SetColor("font_hover_pressed_color", Secondary, Blue);
+        theme.SetColor("font_pressed_color", Secondary, Primary);
+        theme.SetColor("font_hover_pressed_color", Secondary, Primary);
         theme.SetColor("font_disabled_color", Secondary, new Color("#9AA6B1"));
 
         theme.SetTypeVariation(Nav, "Button");
         var navNormal = Box(new Color(0, 0, 0, 0), 10);
         theme.SetStylebox("normal", Nav, navNormal);
         theme.SetStylebox("hover", Nav, Box(Ground, 10));
-        theme.SetStylebox("pressed", Nav, Box(BlueTint, 10));
-        theme.SetStylebox("hover_pressed", Nav, Box(BlueTint, 10));
+        theme.SetStylebox("pressed", Nav, Box(PrimaryTint, 10));
+        theme.SetStylebox("hover_pressed", Nav, Box(PrimaryTint, 10));
         theme.SetStylebox("focus", Nav, new StyleBoxEmpty());
         foreach (var state in new[] { "font_color", "font_hover_color", "font_focus_color" })
         {
             theme.SetColor(state, Nav, TextMuted);
         }
 
-        theme.SetColor("font_pressed_color", Nav, Blue);
-        theme.SetColor("font_hover_pressed_color", Nav, Blue);
+        theme.SetColor("font_pressed_color", Nav, Primary);
+        theme.SetColor("font_hover_pressed_color", Nav, Primary);
         theme.SetFontSize("font_size", Nav, 12);
 
         theme.SetColor("font_color", "Label", TextDark);
@@ -128,13 +128,13 @@ public static class UiStyle
         field.ContentMarginLeft = field.ContentMarginRight = 10;
         field.ContentMarginTop = field.ContentMarginBottom = 7;
         theme.SetStylebox("normal", "LineEdit", field);
-        var focused = Box(Surface, 8, Blue);
+        var focused = Box(Surface, 8, Primary);
         focused.ContentMarginLeft = focused.ContentMarginRight = 10;
         focused.ContentMarginTop = focused.ContentMarginBottom = 7;
         theme.SetStylebox("focus", "LineEdit", focused);
         theme.SetColor("font_color", "LineEdit", TextDark);
         theme.SetStylebox("panel", "ItemList", field);
-        var selected = Box(Blue, 6);
+        var selected = Box(Primary, 6);
         theme.SetStylebox("selected", "ItemList", selected);
         theme.SetStylebox("selected_focus", "ItemList", selected);
 

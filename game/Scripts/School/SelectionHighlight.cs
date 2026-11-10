@@ -25,17 +25,17 @@ public partial class SelectionHighlight : Node2D
 
     public override void _Draw()
     {
-        var line = UiStyle.Blue;
+        var line = UiStyle.Primary;
         if (Hover is { } h && h != Room)
         {
-            IsoDraw.FloorQuad(this, h.X, h.Y, h.Width, h.Length, new Color(UiStyle.Blue, 0.1f));
-            IsoDraw.FloorOutline(this, h.X + 0.3, h.Y + 0.3, h.Width - 0.6, h.Length - 0.6, new Color(UiStyle.Blue, 0.6f), 2f);
+            IsoDraw.FloorQuad(this, h.X, h.Y, h.Width, h.Length, new Color(UiStyle.Primary, 0.1f));
+            IsoDraw.FloorOutline(this, h.X + 0.3, h.Y + 0.3, h.Width - 0.6, h.Length - 0.6, new Color(UiStyle.Primary, 0.6f), 2f);
         }
         if (Room is { } r)
         {
             // Just inside the walls, so the walls don't hide the outline.
             const double inset = 0.3;
-            IsoDraw.FloorQuad(this, r.X, r.Y, r.Width, r.Length, new Color(UiStyle.Blue, 0.16f));
+            IsoDraw.FloorQuad(this, r.X, r.Y, r.Width, r.Length, new Color(UiStyle.Primary, 0.16f));
             IsoDraw.FloorOutline(this, r.X + inset, r.Y + inset, r.Width - (2 * inset), r.Length - (2 * inset), line, 3f);
         }
 
@@ -47,7 +47,7 @@ public partial class SelectionHighlight : Node2D
             var floor = new[] { IsoDraw.ToScreen(x, y), IsoDraw.ToScreen(x + w, y), IsoDraw.ToScreen(x + w, y + l), IsoDraw.ToScreen(x, y + l) };
             var lift = new Vector2(0, -ItemHeight - 4);
             var top = floor.Select(p => p + lift).ToArray();
-            DrawColoredPolygon(top, new Color(UiStyle.Blue, 0.18f));
+            DrawColoredPolygon(top, new Color(UiStyle.Primary, 0.18f));
             DrawPolyline(floor.Append(floor[0]).ToArray(), line, 2f, true);
             DrawPolyline(top.Append(top[0]).ToArray(), line, 3f, true);
             for (var k = 0; k < 4; k++)

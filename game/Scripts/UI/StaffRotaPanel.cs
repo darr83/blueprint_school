@@ -388,7 +388,7 @@ public partial class StaffRotaPanel : PanelContainer
             CanAccept = id => _sim.FindStaff(id) is { } m && place.Roles.Contains(m.Role) && _sim.CanMoveTo(m, place.RoomId) && !(IsDayOnly(place) && shift == StaffShift.Night),
             Accept = id => Drop(id, place, shift),
             Normal = UiStyle.Box(shift == StaffShift.Day ? new Color("#FBFCFD") : new Color("#F6F7FA"), 10, null, 8),
-            Highlight = UiStyle.Box(UiStyle.BlueTint, 10, UiStyle.Blue, 8),
+            Highlight = UiStyle.Box(UiStyle.PrimaryTint, 10, UiStyle.Primary, 8),
         };
         cell.ShowNormal();
         var column = new VBoxContainer();
@@ -409,8 +409,8 @@ public partial class StaffRotaPanel : PanelContainer
         {
             var chip = HudWidgets.Chip();
             var role = need.Recommended == 1 ? StaffGrades.RoleName(need.Role) : StaffGrades.RoleName(need.Role, plural: true);
-            HudWidgets.SetChip(chip, $"{need.Have}/{need.Recommended} {role}", need.Short > 0 ? UiStyle.AmberTint : UiStyle.BlueTint);
-            chip.Text.AddThemeColorOverride("font_color", need.Short > 0 ? UiStyle.AmberText : UiStyle.Blue);
+            HudWidgets.SetChip(chip, $"{need.Have}/{need.Recommended} {role}", need.Short > 0 ? UiStyle.AmberTint : UiStyle.PrimaryTint);
+            chip.Text.AddThemeColorOverride("font_color", need.Short > 0 ? UiStyle.AmberText : UiStyle.Primary);
             chip.Text.AddThemeFontSizeOverride("font_size", 12);
             chips.AddChild(chip.Chip);
         }
@@ -472,7 +472,7 @@ public partial class StaffRotaPanel : PanelContainer
         var pill = new StaffPill { StaffId = member.Id, TooltipText = $"{member.Name}, {member.Grade}\n{member.StatusText}" };
         pill.Clicked += () => Select(_sim.FindStaff(member.Id));
         var selected = member.Id == _selectedId;
-        var box = UiStyle.Box(member.IsInBuilding ? UiStyle.Surface : new Color("#F7F9FB"), 15, selected ? UiStyle.Blue : UiStyle.Border, 0);
+        var box = UiStyle.Box(member.IsInBuilding ? UiStyle.Surface : new Color("#F7F9FB"), 15, selected ? UiStyle.Primary : UiStyle.Border, 0);
         box.ContentMarginLeft = 3;
         box.ContentMarginRight = 10;
         box.ContentMarginTop = box.ContentMarginBottom = 3;
@@ -499,7 +499,7 @@ public partial class StaffRotaPanel : PanelContainer
         if (member.HasPendingMove)
         {
             var moving = UiStyle.Caption($"→ {_sim.PlaceName(member.Role, member.PendingRoomId)}", 12);
-            moving.AddThemeColorOverride("font_color", UiStyle.Blue);
+            moving.AddThemeColorOverride("font_color", UiStyle.Primary);
             moving.MouseFilter = MouseFilterEnum.Ignore;
             line.AddChild(moving);
         }
@@ -511,7 +511,7 @@ public partial class StaffRotaPanel : PanelContainer
         pill.Preview = () =>
         {
             var preview = new PanelContainer { Theme = UiStyle.Theme };
-            preview.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Surface, 15, UiStyle.Blue, 6));
+            preview.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Surface, 15, UiStyle.Primary, 6));
             var text = new Label { Text = member.Name };
             text.AddThemeFontSizeOverride("font_size", 13);
             preview.AddChild(text);
@@ -561,7 +561,7 @@ public partial class StaffRotaPanel : PanelContainer
             {
                 var row = new StaffPill { StaffId = member.Id, MouseDefaultCursorShape = CursorShape.PointingHand };
                 row.Clicked += () => Select(_sim.FindStaff(member.Id));
-                row.AddThemeStyleboxOverride("panel", UiStyle.Box(member.Id == _selectedId ? UiStyle.BlueTint : new Color(0, 0, 0, 0), 6, null, 2));
+                row.AddThemeStyleboxOverride("panel", UiStyle.Box(member.Id == _selectedId ? UiStyle.PrimaryTint : new Color(0, 0, 0, 0), 6, null, 2));
                 var line = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
                 line.AddThemeConstantOverride("separation", 10);
                 var name = new HBoxContainer { CustomMinimumSize = new Vector2(200, 0), MouseFilter = MouseFilterEnum.Ignore };
@@ -635,7 +635,7 @@ public partial class StaffRotaPanel : PanelContainer
             _content.AddChild(HudWidgets.Divider());
             var row = new StaffPill { StaffId = member.Id, MouseDefaultCursorShape = CursorShape.PointingHand };
             row.Clicked += () => Select(_sim.FindStaff(member.Id));
-            row.AddThemeStyleboxOverride("panel", UiStyle.Box(member.Id == _selectedId ? UiStyle.BlueTint : new Color(0, 0, 0, 0), 6, null, 5));
+            row.AddThemeStyleboxOverride("panel", UiStyle.Box(member.Id == _selectedId ? UiStyle.PrimaryTint : new Color(0, 0, 0, 0), 6, null, 5));
             var line = new HBoxContainer { MouseFilter = MouseFilterEnum.Ignore };
             line.AddThemeConstantOverride("separation", 8);
 
@@ -883,7 +883,7 @@ public partial class StaffRotaPanel : PanelContainer
         }
 
         HudWidgets.SetMeter(_tiredness, m.Fatigue, m.Fatigue >= 0.75 ? "Exhausted" : m.Fatigue >= 0.5 ? "Tired" : "Fresh", m.Fatigue >= 0.5 ? Amber : UiStyle.Green);
-        HudWidgets.SetMeter(_skill, m.Skill, $"{m.Skill:P0}", UiStyle.Blue);
+        HudWidgets.SetMeter(_skill, m.Skill, $"{m.Skill:P0}", UiStyle.Primary);
         RefreshBreakList(m);
 
         _sendOnBreak.Disabled = !m.IsOnDuty || m.IsOnBreak || m.Breaks.Any(b => b.Requested && !b.Done);
@@ -991,7 +991,7 @@ public partial class StaffRotaPanel : PanelContainer
     private static Color StatusColour(StaffMember m) => Status(m) switch
     {
         "work" => UiStyle.Green,
-        "free" => UiStyle.Blue,
+        "free" => UiStyle.Primary,
         "break" => Amber,
         _ => GreyDot,
     };
@@ -999,7 +999,7 @@ public partial class StaffRotaPanel : PanelContainer
     private static Color StatusTint(StaffMember m) => Status(m) switch
     {
         "work" => new Color("#E5F3EA"),
-        "free" => UiStyle.BlueTint,
+        "free" => UiStyle.PrimaryTint,
         "break" => UiStyle.AmberTint,
         _ => UiStyle.Ground,
     };
@@ -1171,7 +1171,7 @@ public partial class BreakTrack : Control
         }
 
         var now = X(Sim.Now);
-        DrawLine(new Vector2(now, -2), new Vector2(now, Size.Y + 2), UiStyle.Blue, 2);
+        DrawLine(new Vector2(now, -2), new Vector2(now, Size.Y + 2), UiStyle.Primary, 2);
     }
 }
 
@@ -1199,11 +1199,11 @@ public partial class CoverTrack : Control
                 var from = b.TakenAt ?? b.Start;
                 return t >= from && t < from.AddMinutes(b.Minutes);
             }));
-            var colour = away == 0 ? new Color("#E5F3EA") : away * 3 >= Team.Count ? UiStyle.AmberTint : UiStyle.BlueTint;
+            var colour = away == 0 ? new Color("#E5F3EA") : away * 3 >= Team.Count ? UiStyle.AmberTint : UiStyle.PrimaryTint;
             DrawRect(new Rect2((float)(m / span * Size.X), 2, width + 0.6f, Size.Y - 4), colour);
         }
 
         var now = (float)Math.Clamp((Now - Start).TotalMinutes / span * Size.X, 0, Size.X);
-        DrawLine(new Vector2(now, 0), new Vector2(now, Size.Y), UiStyle.Blue, 2);
+        DrawLine(new Vector2(now, 0), new Vector2(now, Size.Y), UiStyle.Primary, 2);
     }
 }

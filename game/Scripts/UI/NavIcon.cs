@@ -36,7 +36,7 @@ public partial class NavIcon : Control
 
     public override void _Draw()
     {
-        var c = _owner.ButtonPressed ? UiStyle.Blue : UiStyle.TextMuted;
+        var c = _owner.ButtonPressed ? UiStyle.Primary : UiStyle.TextMuted;
         const float w = 2f;
         void L(float x1, float y1, float x2, float y2) => DrawLine(new Vector2(x1, y1), new Vector2(x2, y2), c, w, true);
         void Box(float x, float y, float bw, float bh) => DrawRect(new Rect2(x, y, bw, bh), c, false, w);

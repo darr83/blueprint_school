@@ -9,7 +9,7 @@ public static class HudWidgets
     public static (PanelContainer Badge, Label Initials) Avatar(int size = 52)
     {
         var badge = new PanelContainer { CustomMinimumSize = new Vector2(size, size), MouseFilter = Control.MouseFilterEnum.Ignore };
-        badge.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Blue, size / 2));
+        badge.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Primary, size / 2));
         var initials = new Label { HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
         initials.AddThemeColorOverride("font_color", Colors.White);
         initials.AddThemeFontSizeOverride("font_size", size / 3);
@@ -73,12 +73,12 @@ public static class HudWidgets
     public static (PanelContainer Box, Label Heading, Label Text, Label Detail) FocusCard()
     {
         var box = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        box.AddThemeStyleboxOverride("panel", UiStyle.Box(new Color("#F2F6FC"), 12, new Color("#D6E2F3"), 12));
+        box.AddThemeStyleboxOverride("panel", UiStyle.Box(new Color("#F1F7F3"), 12, new Color("#CFE5D8"), 12));
         var column = new VBoxContainer();
         column.AddThemeConstantOverride("separation", 2);
         box.AddChild(column);
         var heading = UiStyle.Caption(string.Empty, 12);
-        heading.AddThemeColorOverride("font_color", UiStyle.Blue);
+        heading.AddThemeColorOverride("font_color", UiStyle.Primary);
         column.AddChild(heading);
         var text = new Label { AutowrapMode = TextServer.AutowrapMode.WordSmart };
         text.AddThemeFontSizeOverride("font_size", 16);

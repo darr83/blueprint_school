@@ -24,6 +24,7 @@ public static class DecorArt
     private static readonly Color Navy = new("#3B4A5A");
     private static readonly Color Oak = new("#C99A6B");
     private static readonly Color PanelOak = new("#B88655");
+    private static readonly Color Maple = new("#E2B47A");
 
     // ------------------------------------------------------------------ colours
 
@@ -40,6 +41,7 @@ public static class DecorArt
         {
             FloorFinish.WoodPlanks => Oak,
             FloorFinish.Chequer => Navy,
+            FloorFinish.SportsCourt => Maple,
             FloorFinish.CarpetTiles => tint.Darkened(0.3f),
             FloorFinish.SafetyVinyl => tint.Darkened(0.06f),
             _ => tint,
@@ -242,6 +244,89 @@ public static class DecorArt
 
                 break;
             }
+
+            case FloorFinish.SportsCourt:
+            {
+                // Long maple strips, then the court lines painted over them.
+                var seam = new Color(colour.Darkened(0.18f), 0.55f);
+                for (var py = 0.0; py < l - 0.001; py += 0.2)
+                {
+                    Quad(x, y + py, w, Math.Min(0.2, l - py), colour.Darkened((float)(rng.NextDouble() * 0.05)));
+                    if (py > 0)
+                    {
+                        Line(x, y + py, right, y + py, seam);
+                    }
+                }
+
+                DrawCourtLines(c, x, y, w, l, map);
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// A netball/basketball style court: a white boundary a metre in from the walls, a halfway line and
+    /// centre circle, and a semicircle at each end. A smaller badminton court is laid in blue across the middle.
+    /// </summary>
+    private static void DrawCourtLines(CanvasItem c, double x, double y, double w, double l, Func<double, double, Vector2> map)
+    {
+        var white = new Color(1, 1, 1, 0.9f);
+        var red = new Color("#C0392B");
+        var blue = new Color("#2C6FB7");
+        var inset = Math.Min(2, Math.Min(w, l) * 0.12);
+        var (x0, y0, x1, y1) = (x + inset, y + inset, x + w - inset, y + l - inset);
+        if (x1 - x0 < 3 || y1 - y0 < 3)
+        {
+            return;
+        }
+
+        void Line(double ax, double ay, double bx, double by, Color col, float width = 2f) => c.DrawLine(map(ax, ay), map(bx, by), col, width, true);
+        void Arc(double cx, double cy, double radius, double from, double to, Color col)
+        {
+            var points = new List<Vector2>();
+            for (var i = 0; i <= 24; i++)
+            {
+                var a = from + ((to - from) * i / 24);
+                points.Add(map(cx + (Math.Cos(a) * radius), cy + (Math.Sin(a) * radius)));
+            }
+
+            c.DrawPolyline(points.ToArray(), col, 2f, true);
+        }
+
+        // Main court runs along the longer side.
+        Line(x0, y0, x1, y0, white);
+        Line(x1, y0, x1, y1, white);
+        Line(x1, y1, x0, y1, white);
+        Line(x0, y1, x0, y0, white);
+        var (cx, cy) = ((x0 + x1) / 2, (y0 + y1) / 2);
+        var along = (x1 - x0) >= (y1 - y0);
+        var across = along ? y1 - y0 : x1 - x0;
+        var radius = Math.Min(3.6, across * 0.18);
+        if (along)
+        {
+            Line(cx, y0, cx, y1, white);
+            Arc(x0, cy, across * 0.3, -Math.PI / 2, Math.PI / 2, red);
+            Arc(x1, cy, across * 0.3, Math.PI / 2, Math.PI * 1.5, red);
+        }
+        else
+        {
+            Line(x0, cy, x1, cy, white);
+            Arc(cx, y0, across * 0.3, 0, Math.PI, red);
+            Arc(cx, y1, across * 0.3, Math.PI, Math.PI * 2, red);
+        }
+
+        Arc(cx, cy, radius, 0, Math.PI * 2, red);
+
+        // A badminton court (13.4 m x 6.1 m, 26.8 x 12.2 tiles) across the middle, if it fits.
+        var (bl, bw) = (26.8, 12.2);
+        if (along ? (x1 - x0 >= bw + 2 && y1 - y0 >= bl * 0.6) : (y1 - y0 >= bw + 2 && x1 - x0 >= bl * 0.6))
+        {
+            var half = Math.Min(bl, (along ? y1 - y0 : x1 - x0) - 1) / 2;
+            var (hx, hy) = along ? (bw / 2, half) : (half, bw / 2);
+            Line(cx - hx, cy - hy, cx + hx, cy - hy, blue, 1.5f);
+            Line(cx + hx, cy - hy, cx + hx, cy + hy, blue, 1.5f);
+            Line(cx + hx, cy + hy, cx - hx, cy + hy, blue, 1.5f);
+            Line(cx - hx, cy + hy, cx - hx, cy - hy, blue, 1.5f);
         }
     }
 
