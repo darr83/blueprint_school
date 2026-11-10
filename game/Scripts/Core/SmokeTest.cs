@@ -36,6 +36,7 @@ public partial class SmokeTest : Node
     private int _savedStaff;
     private int _savedChairs;
     private int _savedFloors;
+    private int _teachingFloor;
 
     private enum Stage
     {
@@ -61,6 +62,7 @@ public partial class SmokeTest : Node
         Canteen,
         Toilets,
         UpperFloor,
+        Teaching,
         Rotate,
         Finances,
         WaitForLoad,
@@ -327,6 +329,21 @@ public partial class SmokeTest : Node
 
             case Stage.UpperFloor when scene is SchoolScene school && _frame >= 6:
                 Screenshot("09_first_floor");
+                BuildTeachingFloors(school);
+                _teachingFloor = 1;
+                ShowTeachingFloor(school, _teachingFloor);
+                Next(Stage.Teaching);
+                break;
+
+            case Stage.Teaching when scene is SchoolScene school && _frame >= 6:
+                Screenshot($"09_teaching_floor_{_teachingFloor}");
+                if (++_teachingFloor < school.Session.Simulation.FloorCount)
+                {
+                    ShowTeachingFloor(school, _teachingFloor);
+                    _frame = 0;
+                    break;
+                }
+
                 school.ShowFloor(0);
                 Check(IsoDraw.ViewFloor == 0, "Did not go back to the ground floor.");
                 school.ToggleRoutes();
@@ -781,6 +798,70 @@ public partial class SmokeTest : Node
         school.ShowFloor(1);
         Check(IsoDraw.ViewFloor == 1, "Did not show the first floor.");
         school.Camera.SnapTo(school.World.FootPosition(climber), 0.9f);
+    }
+
+    /// <summary>Every teaching room, by floor: the rooms south of each floor's corridor, then the small rooms north of it.</summary>
+    private static readonly (int Floor, string Template, GridRect Rect)[] TeachingRooms =
+    {
+        (1, "dt_workshop", new GridRect(2, 17, 18, 16)),
+        (1, "food_room", new GridRect(34, 17, 14, 16)),
+        (2, "english_classroom", new GridRect(2, 17, 17, 15)),
+        (2, "science_lab", new GridRect(19, 17, 18, 16)),
+        (2, "ict_suite", new GridRect(37, 17, 11, 16)),
+        (2, "prep_room", new GridRect(4, 0, 9, 9)),
+        (2, "hoy_office", new GridRect(14, 0, 8, 9)),
+        (2, "small_group_room", new GridRect(23, 0, 9, 9)),
+        (2, "reflection_room", new GridRect(33, 0, 11, 9)),
+        (2, "school_office", new GridRect(45, 0, 9, 9)),
+        (3, "art_room", new GridRect(2, 17, 17, 16)),
+        (3, "library", new GridRect(19, 17, 18, 16)),
+        (3, "music_room", new GridRect(37, 17, 11, 16)),
+        (3, "changing_room", new GridRect(4, 0, 10, 9)),
+        (3, "send_base", new GridRect(15, 0, 14, 9)),
+        (3, "medical_room", new GridRect(30, 0, 8, 9)),
+        (4, "sports_hall", new GridRect(2, 17, 32, 20)),
+        (4, "drama_studio", new GridRect(35, 17, 13, 16)),
+    };
+
+    /// <summary>
+    /// Adds floors up to the top, each with a corridor, and fits out every kind of teaching room the
+    /// school has, so each one is built and drawn at least once.
+    /// </summary>
+    private static void BuildTeachingFloors(SchoolScene school)
+    {
+        var sim = school.Session.Simulation;
+        sim.AdjustBalance(10_000_000);
+        while (sim.FloorCount < 5)
+        {
+            var floor = sim.AddFloor();
+            Check(floor.CanBuild, "Adding a floor refused: " + string.Join("; ", floor.Problems));
+            var corridor = sim.BuildRoom(new RoomPlan("corridor", sim.Site.OnFloor(new GridRect(B.X + 4, B.Y + 9, 56, 8), sim.FloorCount - 1), WallSide.South));
+            Check(corridor.CanBuild, $"Corridor on floor {sim.FloorCount - 1} refused: " + string.Join("; ", corridor.Problems));
+        }
+
+        foreach (var (floorIndex, template, local) in TeachingRooms)
+        {
+            var rect = sim.Site.OnFloor(new GridRect(B.X + local.X, B.Y + local.Y, local.Width, local.Length), floorIndex);
+            var built = sim.BuildRoom(sim.AutoPlan(template, rect));
+            Check(built.CanBuild, $"{template} refused: " + string.Join("; ", built.Problems));
+        }
+
+        foreach (var kind in Enum.GetValues<RoomKind>().Where(Room.IsTeaching))
+        {
+            Check(sim.SpacesOfKind(kind).Any(), $"No {kind} was built.");
+        }
+
+        var english = sim.SpacesOfKind(RoomKind.Classroom).Single(r => r.TemplateId == "english_classroom");
+        var lab = sim.SpacesOfKind(RoomKind.ScienceLab).Single();
+        Check(english.Seats.Count >= 24, $"The English classroom only seats {english.Seats.Count}.");
+        Check(lab.Seats.Count >= 24, $"The science lab only seats {lab.Seats.Count}.");
+        GD.Print($"[smoke] Teaching rooms: {sim.Spaces.Count(r => r.IsTeachingRoom)} built over {sim.FloorCount} floors; English classroom seats {english.Seats.Count}, science lab {lab.Seats.Count}.");
+    }
+
+    private static void ShowTeachingFloor(SchoolScene school, int floor)
+    {
+        school.ShowFloor(floor);
+        school.Camera.SnapTo(IsoDraw.ToScreen(B.X + 26, school.Session.Simulation.Site.OnFloor(new GridRect(B.X, B.Y + 18, 1, 1), floor).Y), 0.75f);
     }
 
     /// <summary>Saves the current frame when run with "--screenshots=DIR" (needs a real display, not --headless).</summary>
