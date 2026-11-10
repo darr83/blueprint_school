@@ -38,6 +38,8 @@ public partial class SmokeTest : Node
     private int _savedFloors;
     private int _teachingFloor;
 
+    private CanvasLayer? _figureSheet;
+
     private enum Stage
     {
         WaitForMenu,
@@ -63,6 +65,7 @@ public partial class SmokeTest : Node
         Toilets,
         UpperFloor,
         Teaching,
+        Figures,
         Rotate,
         Finances,
         WaitForLoad,
@@ -346,6 +349,16 @@ public partial class SmokeTest : Node
 
                 school.ShowFloor(0);
                 Check(IsoDraw.ViewFloor == 0, "Did not go back to the ground floor.");
+                _figureSheet = new CanvasLayer { Layer = 100 };
+                _figureSheet.AddChild(new FigureSheet { AnchorRight = 1, AnchorBottom = 1 });
+                AddChild(_figureSheet);
+                Next(Stage.Figures);
+                break;
+
+            case Stage.Figures when scene is SchoolScene school && _frame >= 4:
+                Screenshot("09z_figures");
+                _figureSheet?.QueueFree();
+                _figureSheet = null;
                 school.ToggleRoutes();
                 Next(Stage.Rotate);
                 break;
@@ -565,7 +578,7 @@ public partial class SmokeTest : Node
         Check(school.Mode == GameMode.Build, "Should still be in build mode.");
         var floor = Enumerable.Range(0, room.Rect.Width * room.Rect.Length)
             .Select(i => IsoDraw.ToScreen(room.Rect.X + (i % room.Rect.Width) + 0.5, room.Rect.Y + (i / room.Rect.Width) + 0.5))
-            .First(p => school.ItemAt(p, bedsOnly: false) is null);
+            .First(p => school.ItemAt(p) is null);
         school.ClickAt(floor);
         Check(school.Hud.RoomInfo.Visible && school.Hud.RoomInfo.RoomId == room.Id, "Clicking the room in build mode did not open it.");
 

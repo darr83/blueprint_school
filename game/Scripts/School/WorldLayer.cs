@@ -417,9 +417,6 @@ public partial class WorldLayer : Node2D
                 var height = (float)(def.HeightM * IsoDraw.PixelsPerMetre);
                 switch (def.Style)
                 {
-                    case FurnitureStyle.Bed:
-                        AddBed(item.Tile);
-                        break;
                     case FurnitureStyle.Chair:
                         Chair(item.Tile, RoomChairFacing(space, item), colour);
                         break;
@@ -440,13 +437,6 @@ public partial class WorldLayer : Node2D
         {
             Chair(chair.Tile, chair.Facing, new Color(chair.Colour), _chairShifts.GetValueOrDefault(chair.Tile));
         }
-    }
-
-    /// <summary>A made bed (the medical-room leftovers from the hospital; schools will have their own furniture).</summary>
-    private void AddBed(GridCoord spot)
-    {
-        var (cx, cy) = (spot.X + 0.5, spot.Y + 0.5);
-        AddProp(IsoDraw.ToScreen(cx, cy), c => Figures.Bed(c, cx, cy, made: true, false, _ => { }));
     }
 
     /// <summary>A chair in two parts, so whoever sits on it sorts between the seat and the back.</summary>

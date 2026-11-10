@@ -142,6 +142,9 @@ public sealed record PersonLook(Color Top, Color Trousers, Color Skin, Color Hai
 
     public bool Lanyard { get; init; }
 
+    /// <summary>The lanyard's colour, which says who someone is: green for teachers, purple for support staff, gold for leadership.</summary>
+    public Color? LanyardColour { get; init; }
+
     public bool Pocket { get; init; }
 
     public bool FobWatch { get; init; }
@@ -251,13 +254,13 @@ public static partial class Figures
 
     public static readonly Color Shoes = new("#2B2F33");
     public static readonly Color Outline = new("#1D2B36");
-    private static readonly Color LanyardBlue = new("#005EB8");
+    private static readonly Color LanyardGreen = new("#1E6B47");
 
     /// <summary>
     /// A standing (or walking) person whose feet are at <paramref name="foot"/>. With
     /// <paramref name="away"/> they are seen from behind, walking away from the viewer.
     /// </summary>
-    public static void Standing(CanvasItem c, Vector2 foot, PersonLook look, double time, bool walking, int seed, float alpha = 1f, bool away = false, BabyLook? holding = null, bool medicineBag = false)
+    public static void Standing(CanvasItem c, Vector2 foot, PersonLook look, double time, bool walking, int seed, float alpha = 1f, bool away = false)
     {
         var pen = new Pen(c, alpha);
         var r = new Rig(look);
@@ -312,9 +315,9 @@ public static partial class Figures
             pen.Poly(new[] { P(-r.HipW, r.HipY - 1 + bob), P(r.HipW, r.HipY - 1 + bob), P(r.HipW * 1.25f, hem + bob), P(-r.HipW * 1.25f, hem + bob) }, look.Trousers);
         }
 
-        Body(pen, c, foot, look, r, -swing, bob, away, holding, alpha, propped: look.Frame || look.Stick, medicineBag: medicineBag);
+        Body(pen, c, foot, look, r, -swing, bob, away, alpha, propped: look.Frame || look.Stick);
 
-        if (look.Stick && !away && holding is null)
+        if (look.Stick && !away)
         {
             // A walking stick in the right hand, planted a little ahead.
             var hand = P(r.ShW + (3 * s) - (swing * 0.4f), r.HipY - (4 * s) + bob);
@@ -355,7 +358,7 @@ public static partial class Figures
     /// <paramref name="away"/> draws them from behind (their legs are hidden by the chair and their body);
     /// <paramref name="lean"/> turns their knees a little to the left (-1) or right (+1) of the screen.
     /// </remarks>
-    public static void Seated(CanvasItem c, Vector2 foot, PersonLook look, float alpha = 1f, BabyLook? holding = null, bool away = false, float lean = 0)
+    public static void Seated(CanvasItem c, Vector2 foot, PersonLook look, float alpha = 1f, bool away = false, float lean = 0)
     {
         var pen = new Pen(c, alpha);
         var r = new Rig(look);
@@ -365,7 +368,7 @@ public static partial class Figures
         var drop = -12 - r.HipY;
         if (away)
         {
-            Body(pen, c, foot, look, r, 0, drop, away: true, holding, alpha);
+            Body(pen, c, foot, look, r, 0, drop, away: true, alpha);
             return;
         }
 
@@ -396,25 +399,11 @@ public static partial class Figures
             pen.Poly(new[] { P(-r.HipW - 0.5f, -16), P(r.HipW + 0.5f, -16), P(r.HipW + 1.5f + k, -8), P(-r.HipW - 1.5f + k, -8) }, cloth);
         }
 
-        Body(pen, c, foot, look, r, 0, drop, away: false, holding, alpha, seated: true);
+        Body(pen, c, foot, look, r, 0, drop, away: false, alpha, seated: true);
     }
 
     /// <summary>Everything above the legs: torso and clothes, arms, neck, head and the kit they carry.</summary>
-    /// <summary>A white pharmacy paper bag with a green cross, hanging from the hand.</summary>
-    private static void MedicineBag(Pen pen, Vector2 hand, float scale)
-    {
-        var s = scale * 1.35f;
-        var top = hand + new Vector2(-2.6f * s, 0.6f * s);
-        var size = new Vector2(5.2f * s, 6.4f * s);
-        pen.Poly(new[] { top, top + new Vector2(size.X, 0), top + size, top + new Vector2(0, size.Y) }, new Color("#F7F5EE"), new Color("#B8B2A2"), 0.7f);
-        pen.Rect(top + new Vector2(0, -0.8f * s), new Vector2(size.X, 0.9f * s), new Color("#E4DECF"));
-        var mid = top + (size / 2) + new Vector2(0, 0.4f * s);
-        var green = new Color("#1E8E3E");
-        pen.Rect(mid + new Vector2(-0.5f * s, -1.6f * s), new Vector2(1f * s, 3.2f * s), green);
-        pen.Rect(mid + new Vector2(-1.6f * s, -0.5f * s), new Vector2(3.2f * s, 1f * s), green);
-    }
-
-    private static void Body(Pen pen, CanvasItem c, Vector2 foot, PersonLook look, Rig r, float armSwing, float drop, bool away, BabyLook? holding, float alpha, bool seated = false, bool propped = false, bool medicineBag = false)
+    private static void Body(Pen pen, CanvasItem c, Vector2 foot, PersonLook look, Rig r, float armSwing, float drop, bool away, float alpha, bool seated = false, bool propped = false)
     {
         Vector2 P(float x, float y) => foot + new Vector2(x, y + drop);
         var s = r.S;
@@ -433,12 +422,6 @@ public static partial class Figures
         if (look.Kind == TopKind.Hoodie && look.Jacket is null && !away)
         {
             pen.Oval(P(r.Head.X, r.ShY - (1.5f * s)), r.ShW * 0.8f, 4.2f * s, top.Darkened(0.12f));
-        }
-
-        if (holding is { } heldBehind && away)
-        {
-            // Seen from behind, only the end of the baby's blanket shows past the shoulder.
-            Baby(c, P(6, -33 * s), heldBehind, alpha, 0.8f);
         }
 
         // Torso. A tunic or coat comes down over the hips; a dress flares to the knee.
@@ -517,6 +500,12 @@ public static partial class Figures
         {
             // Open coat or blazer: the top underneath shows down the middle, with the lapels either side.
             pen.Poly(new[] { P(-r.ShW * 0.36f, r.Ys), P(r.ShW * 0.36f, r.Ys), P(r.ShW * 0.3f, hemY), P(-r.ShW * 0.3f, hemY) }, top);
+            if (look.Tie is { } jacketTie)
+            {
+                pen.Poly(new[] { P(-1.2f, r.Ys + (2.6f * s)), P(1.2f, r.Ys + (2.6f * s)), P(1.9f, r.WaistY + 2), P(0, r.WaistY + 4.5f), P(-1.9f, r.WaistY + 2) }, jacketTie);
+                pen.Line(P(-1.6f, r.Ys + (6 * s)), P(1.6f, r.Ys + (5 * s)), jacketTie.Lightened(0.45f), 0.8f);
+            }
+
             pen.Line(P(-r.ShW * 0.36f, r.Ys), P(-r.ShW * 0.3f, hemY), outer.Darkened(0.35f), 0.9f);
             pen.Line(P(r.ShW * 0.36f, r.Ys), P(r.ShW * 0.3f, hemY), outer.Darkened(0.35f), 0.9f);
             pen.Poly(new[] { P(-r.ShW * 0.36f, r.Ys), P(-r.ShW * 0.68f, r.Ys), P(-r.ShW * 0.32f, r.Ys + (8 * s)) }, outer.Lightened(0.14f));
@@ -529,7 +518,7 @@ public static partial class Figures
             {
                 case TopKind.Shirt:
                 case TopKind.Polo:
-                    // A collar and a button placket; consultants add a tie.
+                    // A collar and a button placket, and sometimes a tie.
                     NeckV(r.ShW * 0.16f, 3 * s);
                     pen.Poly(new[] { P(-r.ShW * 0.58f, r.Ys - 0.8f), P(-0.6f, r.Ys + 0.4f), P(-r.ShW * 0.24f, r.Ys + (4 * s)) }, top.Lightened(0.18f), top.Darkened(0.2f), 0.6f);
                     pen.Poly(new[] { P(r.ShW * 0.58f, r.Ys - 0.8f), P(0.6f, r.Ys + 0.4f), P(r.ShW * 0.24f, r.Ys + (4 * s)) }, top.Lightened(0.06f), top.Darkened(0.2f), 0.6f);
@@ -674,25 +663,13 @@ public static partial class Figures
 
         // Arms: short sleeves and bare forearms (bare below the elbows) unless in long sleeves or a coat.
         var longSleeves = look.LongSleeves || look.Jacket is not null || look.Kind is TopKind.Hoodie or TopKind.Jumper or TopKind.Cardigan;
-        var cradling = holding is not null && !away;
-        if (holding is { } held && !away)
-        {
-            // Holding a baby in front of the chest, its head in the crook of the left arm.
-            Baby(c, P(0.5f, -31 * s), held, alpha);
-        }
-
-        var teddy = look.Teddy && !away && !cradling && !seated;
+        var teddy = look.Teddy && !away && !seated;
         foreach (var side in new[] { -1f, 1f })
         {
             var shoulder = P(side * (r.ShW - 0.6f), r.ShY + 1.6f);
             var elbow = P(side * (r.ShW + (1.3f * s)), r.ShY + ((r.HipY - r.ShY) * 0.5f) + (armSwing * side * 0.3f));
             var hand = P((side * (r.ShW + (1.4f * s))) + (armSwing * side * 0.6f), r.HipY - (2.5f * s));
-            if (cradling)
-            {
-                elbow = P(side * (r.ShW + 1.5f), -29 * s);
-                hand = P(side * -3.5f, -27.5f * s);
-            }
-            else if (seated)
+            if (seated)
             {
                 // Hands resting in the lap.
                 hand = P(side * r.ShW * 0.75f, r.HipY - (1.5f * s));
@@ -724,10 +701,6 @@ public static partial class Figures
             }
 
             pen.Dot(hand, r.ArmW * 0.56f, look.Gloves ?? arm);
-            if (medicineBag && side > 0 && !cradling)
-            {
-                MedicineBag(pen, hand, r.S);
-            }
         }
 
         if (teddy)
@@ -745,19 +718,18 @@ public static partial class Figures
         pen.Rect(new Vector2(head.X - (r.Head.X * 0.5f) - (r.Rx * 0.33f), neckTop), new Vector2(r.Rx * 0.66f, P(0, r.Ys).Y - neckTop + 1.2f), skin.Darkened(0.08f));
         if (look.Lanyard)
         {
+            var lanyard = look.LanyardColour ?? LanyardGreen;
             if (away)
             {
-                pen.Line(P(-r.ShW * 0.28f, r.Ys - 0.5f), P(r.ShW * 0.28f, r.Ys - 0.5f), LanyardBlue, 1f);
+                pen.Line(P(-r.ShW * 0.28f, r.Ys - 0.5f), P(r.ShW * 0.28f, r.Ys - 0.5f), lanyard, 1.4f);
             }
             else
             {
-                var card = P(0, cradling ? r.ShY + (5 * s) : r.ShY + (10.5f * s));
-                pen.Open(LanyardBlue, 1f, P(-r.ShW * 0.24f, r.Ys), card + new Vector2(r.ShW * 0.12f, 0), P(r.ShW * 0.3f, r.Ys));
-                if (!cradling)
-                {
-                    pen.Rect(card, new Vector2(4, 5), Colors.White);
-                    pen.Rect(card + new Vector2(0.6f, 0.7f), new Vector2(1.4f, 1.6f), new Color("#9AB4CC"));
-                }
+                var card = P(0, r.ShY + (10.5f * s));
+                pen.Open(lanyard, 1.4f, P(-r.ShW * 0.24f, r.Ys), card + new Vector2(r.ShW * 0.12f, 0), P(r.ShW * 0.3f, r.Ys));
+                pen.Rect(card, new Vector2(4, 5), Colors.White);
+                pen.Rect(card + new Vector2(0.6f, 0.7f), new Vector2(1.4f, 1.6f), new Color("#9AB4CC"));
+                pen.Rect(card + new Vector2(0, 4), new Vector2(4, 1), lanyard);
             }
         }
 
@@ -1201,263 +1173,6 @@ public static partial class Figures
         if (look.Style is not (HairStyle.Bald or HairStyle.Balding or HairStyle.Turban))
         {
             pen.Arc(head + new Vector2(0, -1), rx * 0.8f, Mathf.Pi * 1.15f, Mathf.Pi * 1.45f, new Color(hair.Lightened(0.25f), 0.8f), 1f);
-        }
-    }
-
-    /// <summary>Hospital gown: pale blue with a small print. Children get a sunny yellow one.</summary>
-    private static readonly Color Gown = new("#C3D8EA");
-    private static readonly Color ChildGown = new("#F7E3A1");
-
-    /// <summary>
-    /// A patient in bed, lying flat on their back. The blanket is tucked in at chest height and follows
-    /// the body underneath it: hips, the two legs and the feet tenting it at the end. Above it the
-    /// patient wears a hospital gown. Their head rests on the pillow, face up to the ceiling, with one
-    /// arm by their side and the other (the one nearer the viewer) laid across their tummy, so the
-    /// ID wristband (in the triage colour when there is one) can always be seen.
-    /// <paramref name="at"/> maps (along, across) to the screen: along runs from the head (negative)
-    /// to the feet (positive).
-    /// </summary>
-    private static void LyingFigure(CanvasItem c, Func<double, double, Vector2> at, PersonLook look, Color blanket, Color? band, BabyLook[]? onChest = null)
-    {
-        var pen = new Pen(c, 1f);
-        var sz = Mathf.Clamp(look.Scale, 0.5f, 1f);
-        const double anchor = -1.45;
-
-        // Children are smaller, lying at the head end of the bed.
-        Vector2 Up(double along, double across, float h) => at((along * sz) + ((1 - sz) * anchor), across * sz) + new Vector2(0, -h);
-        Vector2 Flat(double along, double across, float h) => at(along, across) + new Vector2(0, -h);
-        var near = at(0, 1).Y >= at(0, -1).Y ? 1.0 : -1.0;
-        var skin = look.Skin;
-        var gown = sz < 0.8f ? ChildGown : Gown;
-
-        // An outline traced round the body at a list of (along, half-width) stations.
-        Vector2[] Stations((double Along, double Half)[] stations, Func<double, float> height)
-        {
-            var points = new Vector2[stations.Length * 2];
-            for (var i = 0; i < stations.Length; i++)
-            {
-                var (along, half) = stations[i];
-                points[i] = Up(along, -half, height(along));
-                points[(stations.Length * 2) - 1 - i] = Up(along, half, height(along));
-            }
-
-            return points;
-        }
-
-        // Long hair fanned out on the pillow.
-        var hair = look.Hair;
-        var style = look.Cap is null ? look.Style : HairStyle.Crop;
-        if (style is HairStyle.Long or HairStyle.Wavy or HairStyle.Braids or HairStyle.Ponytail)
-        {
-            pen.Oval(Up(-1.5, 0, 2.5f), (11 * sz) + 1, 7 * sz, hair);
-        }
-
-        // Shoulders and chest in the gown.
-        const double top = -0.6;
-        var chest = Stations(new[] { (-1.2, 0.2), (-1.14, 0.36), (-1.04, 0.45), (-0.8, 0.46), (top + 0.15, 0.45) }, _ => 3.8f);
-        pen.Poly(Array.ConvertAll(chest, p => p + new Vector2(0.8f, 1.5f)), new Color(0, 0, 0, 0.1f));
-        pen.Poly(chest, gown, gown.Darkened(0.25f), 0.8f);
-        foreach (var (a, b) in new[] { (-0.95, -0.2), (-0.8, 0.12), (-0.68, -0.26), (-0.9, 0.28), (-0.66, 0.22) })
-        {
-            pen.Dot(Up(a, b, 3.8f), 0.7f, gown.Darkened(0.3f));
-        }
-
-        pen.Open(gown.Darkened(0.3f), 0.9f, Up(-1.16, -0.14, 3.9f), Up(-1.04, 0, 3.9f), Up(-1.16, 0.14, 3.9f));
-
-        // The blanket, tucked in down the sides of the mattress, with its thickness showing.
-        const double end = 1.8;
-        const double width = 0.64;
-        var edge = (top * sz) + ((1 - sz) * anchor);
-        var cover = RoundedQuad(at, edge, end, width, 0.14);
-        pen.Poly(Array.ConvertAll(cover, p => p + new Vector2(0, 1.5f)), blanket.Darkened(0.28f));
-        pen.Poly(cover, blanket);
-
-        // The body under the covers: a gentle rise over the hips and two legs, then the feet tenting it.
-        float Rise(double along) => (float)(along < 0.6 ? 3.2 : 3.2 - ((along - 0.6) * 1.2));
-        var body = Stations(new[] { (top + 0.05, 0.47), (0.2, 0.46), (0.55, 0.42), (1.0, 0.34), (1.45, 0.27), (1.62, 0.24) }, Rise);
-        pen.Poly(Array.ConvertAll(body, p => p + new Vector2(0.8f, 1.6f)), new Color(blanket.Darkened(0.2f), 0.6f));
-        pen.Poly(body, blanket.Lightened(0.1f));
-        pen.Open(blanket.Darkened(0.2f), 1.2f, Up(0.55, 0, Rise(0.55) - 0.6f), Up(1.0, 0, Rise(1.0) - 1), Up(1.5, 0, Rise(1.5) - 1));
-        if (look.Bump)
-        {
-            // The pregnant bump lifting the blanket over the tummy.
-            var dome = Up(0.05, 0, 7);
-            pen.Oval(dome + new Vector2(1, 3), 12, 8.5f, new Color(blanket.Darkened(0.25f), 0.5f));
-            pen.Oval(dome, 12, 8.5f, blanket.Lightened(0.12f));
-            pen.Arc(dome + new Vector2(-3, -2.5f), 6, Mathf.Pi * 1.05f, Mathf.Pi * 1.6f, blanket.Lightened(0.35f), 1.4f);
-            pen.Arc(dome, 12, 0.15f, Mathf.Pi - 0.15f, blanket.Darkened(0.2f), 1f);
-        }
-
-        foreach (var side in new[] { -1.0, 1.0 })
-        {
-            // The two feet tenting the blanket.
-            var toes = Up(1.6, side * 0.13, 4.2f);
-            pen.Oval(toes, 3.6f * sz, 2.8f * sz, blanket.Lightened(0.14f));
-            pen.Arc(toes, 3.2f * sz, 0.2f, Mathf.Pi - 0.2f, blanket.Darkened(0.18f), 1f);
-        }
-
-        // Folds where the blanket drops over the sides of the mattress.
-        pen.Line(Flat(edge + 0.8, -0.56, 0.5f), Flat(1.5, -0.56, 0.5f), new Color(blanket.Darkened(0.15f), 0.7f), 1f);
-        pen.Line(Flat(edge + 0.8, 0.56, 0.5f), Flat(1.5, 0.56, 0.5f), new Color(blanket.Darkened(0.15f), 0.7f), 1f);
-
-        // The white top sheet turned down over the blanket at the chest.
-        var sheet = new[] { Flat(edge - 0.04, -width, 1.2f), Flat(edge - 0.04, width, 1.2f), Flat(edge + 0.2, width, 1.4f), Flat(edge + 0.2, -width, 1.4f) };
-        pen.Poly(sheet, new Color("#F3F6F8"));
-        pen.Line(sheet[2], sheet[3], new Color("#C9D3DC"), 1.1f);
-
-        // Arms on top of the covers, sleeves to the elbow.
-        void Arm(double side, (double Along, double Across, float H)[] path, bool banded)
-        {
-            var p = Array.ConvertAll(path, q => Up(q.Along, side * q.Across, q.H));
-            var drop = new Vector2(0.7f, 1.8f);
-            pen.Limb(new Color(0, 0, 0, 0.13f), 5.6f * sz, p[1] + drop, p[2] + drop, p[3] + drop);
-            pen.Limb(skin, 5f * sz, p[1], p[2], p[3]);
-            pen.Limb(gown.Darkened(0.07f), 6.6f * sz, p[0], p[0].Lerp(p[1], 0.75f));
-            pen.Dot(p[3], 3.1f * sz, skin);
-            if (banded)
-            {
-                // The ID band: a white strap with a block of the triage colour.
-                var along = (p[3] - p[2]).Normalized();
-                var wrist = p[2] + (along * 0.5f);
-                c.DrawLine(wrist - (along * 2.6f), wrist + (along * 2.6f), Colors.White, 6.8f * sz);
-                if (band is { } colour)
-                {
-                    c.DrawLine(wrist - (along * 1.6f), wrist + (along * 1.6f), colour, 6.8f * sz);
-                }
-                else
-                {
-                    c.DrawLine(wrist - (along * 1.2f), wrist + (along * 1.2f), new Color("#C9D3DC"), 1f);
-                }
-            }
-        }
-
-        var straight = new[] { (-1.0, 0.42, 3.6f), (-0.55, 0.46, 4.4f), (-0.16, 0.42, 4.6f), (-0.02, 0.4, 4.6f) };
-        var across = new[] { (-1.0, 0.43, 3.6f), (-0.5, 0.54, 4.6f), (-0.22, 0.2, 7f), (-0.16, 0.04, 7.3f) };
-        var cuddling = onChest is { Length: > 0 };
-        Arm(-near, straight, false);
-        if (!cuddling)
-        {
-            Arm(near, look.Bump ? straight : across, true);
-        }
-
-        // Neck, then the head: a ball resting on the pillow, face turned up to the ceiling.
-        var r = 7.8f * (0.72f + (0.28f * sz)) * Mathf.Lerp(1f, look.HeadScale, 0.5f);
-        var head = Up(-1.5, 0, 7);
-        pen.Line(head + new Vector2(0, 2), Up(-1.22, 0, 5), skin.Darkened(0.08f), 5 * sz);
-        pen.Oval(head + new Vector2(1.2f, 4.5f), r * 1.05f, r * 0.6f, new Color(0, 0, 0, 0.12f));
-        var feet = (Up(1, 0, 0) - Up(0, 0, 0)).Normalized();
-        var over = (Up(0, 1, 0) - Up(0, 0, 0)).Normalized();
-        Vector2 F(float towardFeet, float sideways) => head + new Vector2(0, -1.2f) + (feet * towardFeet) + (over * sideways);
-        var scarf = style == HairStyle.Hijab;
-        if (scarf)
-        {
-            pen.Dot(head, r + 1.6f, hair);
-            pen.Arc(head, r + 1.6f, 0, Mathf.Tau, hair.Darkened(0.25f), 0.9f);
-            pen.Oval(head + (feet * 1.2f) + new Vector2(0, -1), r * 0.8f, r * 0.76f, skin);
-        }
-        else
-        {
-            pen.Dot(head - (over * r * 0.95f) + new Vector2(0, 0.5f), 1.7f, skin);
-            pen.Dot(head + (over * r * 0.95f) + new Vector2(0, 0.5f), 1.7f, skin.Darkened(0.08f));
-            pen.Dot(head, r, skin);
-            pen.Arc(head, r, 0, Mathf.Tau, skin.Darkened(0.28f), 0.9f);
-        }
-
-        // Hair on the crown, the side of the head away from the feet.
-        var crown = Mathf.Atan2(-feet.Y, -feet.X);
-        if (look.Cap is { } cap)
-        {
-            pen.Poly(Lens(head, r + 0.6f, head - (feet * r * 0.8f) + new Vector2(0, -1.2f), r * 1.04f), cap);
-        }
-        else if (style == HairStyle.Turban)
-        {
-            pen.Poly(Lens(head, r + 2.2f, head - (feet * r * 0.75f) + new Vector2(0, -1.5f), r * 1.15f), hair, hair.Darkened(0.3f));
-        }
-        else if (style == HairStyle.Balding)
-        {
-            pen.Arc(head, r, crown - 1.5f, crown + 1.5f, hair, 2.4f);
-        }
-        else if (!scarf && style != HairStyle.Bald)
-        {
-            var shift = style is HairStyle.Crop or HairStyle.Receding ? 1.2f : 0.95f;
-            pen.Poly(Lens(head, r + 0.6f, head - (feet * r * shift) + new Vector2(0, -1.2f), r * 1.02f), hair);
-            pen.Arc(head, r + 0.5f, crown - 1.35f, crown + 1.35f, hair, 1.6f);
-            if (style is HairStyle.Curly or HairStyle.Perm or HairStyle.Afro)
-            {
-                for (var i = -3; i <= 3; i++)
-                {
-                    pen.Dot(head + (new Vector2(Mathf.Cos(crown + (i * 0.45f)), Mathf.Sin(crown + (i * 0.45f))) * (r + 0.6f)), style == HairStyle.Afro ? 3.4f : 2.6f, hair);
-                }
-            }
-            else if (style == HairStyle.Pigtails)
-            {
-                foreach (var side in new[] { -1f, 1f })
-                {
-                    pen.Dot(head - (feet * 2) + (over * side * (r + 3)), 3.2f, hair);
-                }
-            }
-            else if (style == HairStyle.Bun)
-            {
-                pen.Dot(head - (feet * (r + 1.5f)), 3f, hair);
-            }
-        }
-
-        // Resting, eyes closed.
-        var lid = skin.Darkened(0.5f);
-        var brow = hair.V > 0.75f && hair.S < 0.15f ? new Color("#B9B9B6") : hair.Darkened(0.25f);
-        foreach (var side in new[] { -1f, 1f })
-        {
-            pen.Arc(F(-0.2f, side * 2.9f) + new Vector2(0, -0.4f), 1.3f, 0.25f, Mathf.Pi - 0.25f, lid, 0.9f);
-            var b = F(-2.3f, side * 3f);
-            pen.Line(b - (over * 1.1f), b + (over * 1.1f), brow, 0.8f);
-            if (look.Blush)
-            {
-                pen.Dot(F(2.2f, side * 3.6f), 1.5f, new Color(0.94f, 0.47f, 0.47f, 0.35f));
-            }
-        }
-
-        pen.Dot(F(1.5f, 0), 0.8f, skin.Darkened(0.14f));
-        var mouth = F(3.3f, 0);
-        if (look.Beard)
-        {
-            var chin = Mathf.Atan2(feet.Y, feet.X);
-            pen.Arc(head, r - 1.4f, chin - 1.2f, chin + 1.2f, hair, 3f);
-        }
-        else if (look.Moustache)
-        {
-            pen.Line(mouth - (over * 2) + new Vector2(0, -0.9f), mouth + (over * 2) + new Vector2(0, -0.9f), hair, 1.4f);
-        }
-
-        pen.Line(mouth - (over * 1.2f), mouth + (over * 1.2f), look.Beard ? skin.Darkened(0.1f) : skin.Darkened(0.42f), 0.9f);
-        if (look.Glasses)
-        {
-            var frame = look.GlassesFrame ?? new Color("#2B2F33");
-            foreach (var side in new[] { -1f, 1f })
-            {
-                pen.Arc(F(-0.2f, side * 2.9f), 2.1f, 0, Mathf.Tau, frame, 0.8f);
-            }
-        }
-
-        if (cuddling)
-        {
-            // Skin to skin: the newborn (or twins) lying on mum's chest, her hand round them.
-            for (var i = 0; i < onChest!.Length; i++)
-            {
-                var spot = Up(-0.78 + (i * 0.32), (i * 0.18) - (0.09 * (onChest.Length - 1)), 7.5f);
-                Baby(c, spot, onChest[i]);
-            }
-
-            var hold = Up(-0.6, 0.28, 8.5f);
-            pen.Line(hold + new Vector2(5, 1), hold, skin, 4.2f);
-            pen.Dot(hold, 2.6f, skin);
-        }
-        else if (look.Teddy)
-        {
-            // A teddy tucked in beside a small child.
-            var bear = new Color("#B98952");
-            var spot = Up(-0.75, -near * 0.45, 7);
-            pen.Dot(spot, 3.2f, bear);
-            pen.Dot(spot - (feet * 4) + new Vector2(0, -1), 2.6f, bear);
         }
     }
 

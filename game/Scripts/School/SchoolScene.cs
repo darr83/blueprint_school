@@ -379,7 +379,7 @@ public partial class SchoolScene : Node2D
             return;
         }
 
-        if (ItemAt(world, bedsOnly: false) is { } hit)
+        if (ItemAt(world) is { } hit)
         {
             _hud.HideRightPanels();
             _hud.ItemInfo.ShowItem(hit.Room, hit.Item);
@@ -415,7 +415,7 @@ public partial class SchoolScene : Node2D
     /// The furniture under a point on screen, counting its height so clicking the top of a cupboard
     /// works. Beds are the patient beds on wards and in cubicles (not X-ray tables).
     /// </summary>
-    public (Room Room, PlacedFurniture Item)? ItemAt(Vector2 world, bool bedsOnly)
+    public (Room Room, PlacedFurniture Item)? ItemAt(Vector2 world)
     {
         (Room, PlacedFurniture)? best = null;
         var bestDepth = float.MinValue;
@@ -424,12 +424,6 @@ public partial class SchoolScene : Node2D
             foreach (var item in space.Furniture)
             {
                 if (!_session.Database.Furniture.TryGetValue(item.ItemId, out var def))
-                {
-                    continue;
-                }
-
-                var isBed = def.Style == Simulation.Data.Models.FurnitureStyle.Bed;
-                if (bedsOnly && !isBed)
                 {
                     continue;
                 }
@@ -459,7 +453,6 @@ public partial class SchoolScene : Node2D
         }
 
         // Waiting chairs the player has placed, in waiting rooms and along corridors.
-        if (!bedsOnly)
         {
             var sim = _session.Simulation;
             foreach (var placed in sim.Chairs.Where(c => IsoDraw.OnViewFloor(c.Tile.Y)))

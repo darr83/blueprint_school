@@ -9,10 +9,10 @@ public partial class NavIcon : Control
     {
         School,
         Build,
-        Patients,
+        Pupils,
         Staff,
         Hire,
-        Clinics,
+        Timetable,
         Finances,
         Stats,
         Routes,
@@ -56,7 +56,7 @@ public partial class NavIcon : Control
                 L(17, 13, 17, 21);
                 L(13, 17, 21, 17);
                 break;
-            case Kind.Patients:
+            case Kind.Pupils:
                 DrawArc(new Vector2(12, 7), 4, 0, Mathf.Tau, 24, c, w, true);
                 DrawArc(new Vector2(12, 22), 8, Mathf.Pi, Mathf.Tau, 24, c, w, true);
                 break;
@@ -72,7 +72,7 @@ public partial class NavIcon : Control
                 L(19, 6, 19, 14);
                 L(15, 10, 23, 10);
                 break;
-            case Kind.Clinics:
+            case Kind.Timetable:
                 // A calendar page.
                 DrawRect(new Rect2(3, 5, 18, 16), c, false, w);
                 L(3, 10, 21, 10);

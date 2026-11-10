@@ -182,8 +182,8 @@ public static class Looks
                 Kind = Pick(seed, 17, TopKind.Shirt, TopKind.Jumper, TopKind.Cardigan), Lanyard = true, ShoeColour = new Color("#3A2A1E"),
             },
 
-            // Teaching assistants: a school polo shirt with a lanyard.
-            StaffRole.TeachingAssistant => new PersonLook(new Color("#1E6B47"), new Color("#22262B"), who.Skin, hair)
+            // Teaching assistants: a navy school polo shirt with a lanyard.
+            StaffRole.TeachingAssistant => new PersonLook(new Color("#2B3A55"), new Color("#22262B"), who.Skin, hair)
             {
                 Kind = TopKind.Polo, Lanyard = true, ShoeColour = new Color("#1C1F22"),
             },
@@ -201,8 +201,61 @@ public static class Looks
             },
         };
 
-        look = look with { Style = style, Bobble = new Color("#F2C230"), Build = 0.92f + (Roll(seed, 4, 5) * 0.06f) };
+        look = look with { Style = style, Bobble = new Color("#F2C230"), Build = 0.92f + (Roll(seed, 4, 5) * 0.06f), LanyardColour = LanyardFor(member) };
         return WithFace(look, seed, female, age, who.SkinIndex, neat: true);
+    }
+
+    /// <summary>Teachers wear green lanyards, support staff purple and the leadership team gold.</summary>
+    public static readonly Color TeacherLanyard = new("#1E6B47");
+
+    public static readonly Color SupportLanyard = new("#7A4FA3");
+
+    public static readonly Color LeadershipLanyard = new("#E3A92B");
+
+    public static Color LanyardFor(StaffMember member) =>
+        member.Grade.Contains("Head", StringComparison.OrdinalIgnoreCase) || member.Grade.Contains("Leader", StringComparison.OrdinalIgnoreCase) ? LeadershipLanyard
+        : member.Role == StaffRole.Teacher ? TeacherLanyard
+        : SupportLanyard;
+
+    /// <summary>The school's blazer: bottle green, with a gold badge on the breast pocket.</summary>
+    public static readonly Color Blazer = new("#1E6B47");
+
+    public static readonly Color BlazerBadge = new("#E3A92B");
+
+    /// <summary>The four houses' tie colours.</summary>
+    public static readonly Color[] HouseColours = { new("#C0392B"), new("#2C6FB7"), new("#E3A92B"), new("#7A4FA3") };
+
+    /// <summary>
+    /// A pupil in school uniform: bottle-green blazer over a white shirt, a tie in their house colour, dark
+    /// trousers or a pleated skirt, black shoes. Year 7s (11) are small; Year 11s (16) are nearly adult height.
+    /// </summary>
+    public static PersonLook Pupil(int seed, int year, int house, bool female)
+    {
+        var age = Math.Clamp(year, 7, 11) + 4;
+        var look = Civilian(seed, female, age, coat: false, bump: false);
+        var skirt = female && look.Style != HairStyle.Hijab && Roll(seed, 60, 2) == 0;
+        var grow = (Math.Clamp(year, 7, 11) - 7) / 4f;
+        return look with
+        {
+            Top = new Color("#F6F8FA"),
+            Kind = TopKind.Shirt,
+            Trim = null,
+            Motif = null,
+            Jacket = Blazer,
+            Badge = BlazerBadge,
+            Tie = HouseColours[((house % HouseColours.Length) + HouseColours.Length) % HouseColours.Length],
+            Trousers = skirt ? new Color("#5A616B") : new Color("#2B2F33"),
+            Legs = skirt ? LegKind.Skirt : LegKind.Trousers,
+            Tights = skirt ? Pick(seed, 61, new Color("#1C1F22"), new Color("#1C1F22"), new Color("#F2F4F7")) : null,
+            ShoeColour = new Color("#1C1F22"),
+            LongSleeves = true,
+            Scale = Mathf.Lerp(0.8f, 0.96f, grow) * (female ? 0.98f : 1f),
+            HeadScale = Mathf.Lerp(0.95f, 1f, grow),
+            Teddy = false,
+            Stick = false,
+            Frame = false,
+            Lanyard = false,
+        };
     }
 
     /// <summary>The colour that stands for a staff member's uniform in lists and on route lines.</summary>

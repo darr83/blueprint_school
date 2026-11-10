@@ -373,10 +373,13 @@ public partial class MainHUD : CanvasLayer
         brand.AddThemeConstantOverride("separation", 10);
         var logo = new PanelContainer { CustomMinimumSize = new Vector2(32, 32), SizeFlagsVertical = Control.SizeFlags.ShrinkCenter };
         logo.AddThemeStyleboxOverride("panel", UiStyle.Box(UiStyle.Primary, 8));
-        var cross = new Label { Text = "+", HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
-        cross.AddThemeColorOverride("font_color", Colors.White);
-        cross.AddThemeFontSizeOverride("font_size", 26);
-        logo.AddChild(cross);
+        // The school crest: an open book in gold on bottle green.
+        logo.AddChild(new TextureRect
+        {
+            Texture = BuildIcons.Get("book", UiStyle.Gold, 22),
+            StretchMode = TextureRect.StretchModeEnum.KeepCentered,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        });
         brand.AddChild(logo);
         var names = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
         names.AddThemeConstantOverride("separation", -2);
