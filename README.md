@@ -12,20 +12,28 @@ from the first bell to the last, with Year 7 to Year 11 pupils, lessons, behavio
 
 | Milestone | State |
 |---|---|
-| 1. Foundation: the hospital engine copied over, renamed, and patients, triage and NEWS2 taken out | ✅ This branch |
-| 2. School look: colours, floors, bell timeline, figures, subject and room data | Next |
+| 1. Foundation: the hospital engine copied over, renamed, and patients, triage and NEWS2 taken out | ✅ Done |
+| 2. School look: colours, floors, bell timeline, figures, subject and room data | ✅ This branch |
 | 3. One playable school day, Year 7 only | Planned |
 | 4. Headteacher assistant and staffing | Planned |
 
-What works now: an empty school building and money in the bank; corridors, reception (desk, doors
-and chairs), staff rooms, toilets, a canteen and vending, extensions, more floors with lifts and
-stairs; decorating; hiring teachers, teaching assistants, a receptionist and site staff from a
-shortlist; day and night teams with planned breaks; finances, stats, notifications, a fire alarm
-test on Wednesdays, the cheat console, and full save and load.
+What works now: an empty school building and money in the bank; corridors, reception, staff rooms,
+toilets, a canteen and vending, extensions, more floors with lifts and stairs; every school room
+(classrooms by subject, science labs and prep rooms, computer suites, art, music, drama, D&T, food,
+a sports hall with court lines, changing rooms, a library, a SEND base, offices, a medical room)
+laid out with desks, benches and kit; decorating; the school's green and gold look; a bell timeline
+in the top bar, the school bell at the start of each period and PA announcements through the day;
+pupils in uniform (bottle-green blazer, house tie, sized by year) and staff lanyards by role;
+hiring teachers, teaching assistants, a receptionist and site staff; finances, stats,
+notifications, the cheat console, and full save and load.
 
-Still from the hospital and due to change in milestone 2: the room kind names in code (`CareSpace`,
-`CareSpaceKind`), the medical furniture and equipment in the furniture data, the namespace and
-folder called `Hospital`, and the hospital sounds and PA voice lines.
+The data for the day lives in `game/Data`: `Subjects/` (15 subjects with Key Stage 3 lessons a
+week, adding up to 25), `BellSchedule/` (the periods of the day) and `RoomTemplates/`.
+
+Not yet: pupils in the building, the timetable and lessons (milestone 3). Still from the hospital:
+the day and night staff teams, which become the school day in milestone 3. New PA voice lines and
+school ambience need an ElevenLabs key (see `tools/SoundBaker/README.md`); until they're recorded
+those announcements are silent.
 
 ## Repository layout
 
@@ -33,19 +41,20 @@ folder called `Hospital`, and the hospital sounds and PA voice lines.
 game/                          Godot project (open this folder in Godot)
   project.godot
   BlueprintSchool.csproj       Game scripts; references the simulation library
-  Data/                        All data-driven content (JSON): departments, rooms, furniture, names, build menu
+  Data/                        All data-driven content (JSON): departments, subjects, bell schedule, rooms, furniture, names, build menu
   Scenes/                      Main menu and school scenes
   Scripts/
     Audio/                     Ambience, interface sounds and the PA announcer
     Core/                      GameManager (autoload), session, settings, saves, smoke test
-    Hospital/                  Site, rooms and people drawing, isometric camera, build tool
+    School/                    Site, rooms and people drawing, isometric camera, build tool
     UI/                        Main menu, HUD, build bar, staff, rota, recruitment, stats and finance panels
 src/BlueprintSchool.Simulation/   Engine-independent game rules (no Godot references)
   Core/                        Simulation clock, event bus, save format
   Data/                        JSON loading and validation, data models
   World/                       Grid, metres to tiles, isometric projection, site map, A* pathfinding
   Staff/                       Staff members, roles and grades
-  Hospital/                    Rooms ("care spaces"), room layouts, decor
+  Rooms/                       Rooms, room layouts (teaching, hall, library...), decor
+  SchoolDay/                   The bell schedule
   Simulation/                  SchoolSimulation: building, staff, shifts, breaks, toilets, money, saves
 tests/BlueprintSchool.Simulation.Tests/  xUnit tests
 tools/SimulationRunner/        Console tool: runs a small school for a while and prints the results

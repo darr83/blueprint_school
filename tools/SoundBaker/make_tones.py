@@ -1,7 +1,6 @@
-"""Makes the game's code-generated sounds: monitor beeps, alarms, chimes and interface sounds.
+"""Makes the game's code-generated sounds: the school bell, chimes and interface sounds.
 
-These are simple tones (real bedside monitors use simple tones too), so they're made here
-for free instead of spending ElevenLabs credits. Run from the repository root:
+These are simple tones, so they're made here for free instead of spending ElevenLabs credits. Run from the repository root:
 
     python3 tools/SoundBaker/make_tones.py
 
@@ -114,36 +113,30 @@ def save(name, x, peak=0.8):
     print(f"{name}.wav  {len(x) / RATE:.2f}s")
 
 
-ALARM = (1.0, 0.5, 0.35, 0.2, 0.12)  # harmonic-rich so alarms cut through the ambience
 
 
 def main():
-    # --- Monitors -----------------------------------------------------------
-    # One soft pulse-oximeter pip. The game plays it at the patient's heart rate.
-    save("monitor_beep", tone(940, 0.11, harmonics=(1.0, 0.08), attack=0.003, release=0.05), peak=0.55)
+    # --- The school bell -------------------------------------------------
+    # An electric bell: a hammer striking a steel gong about twenty times a second. Each strike is
+    # a short burst of the gong's inharmonic partials, so the strikes blur into the familiar rattle.
+    def school_bell(seconds):
+        strike_rate = 21.0
+        partials = ((1.0, 1.0), (2.76, 0.55), (5.4, 0.3), (8.93, 0.15))
+        n = int(RATE * seconds)
+        t = np.arange(n) / RATE
+        gong = sum(a * np.sin(2 * np.pi * 1180 * r * t) for r, a in partials)
+        phase = (t * strike_rate) % 1.0
+        hammer = np.exp(-phase / 0.018) * 0.85 + 0.15
+        clatter = noise(seconds, lowpass=7000, highpass=2500) * np.exp(-phase / 0.004) * 0.25
+        return fade(gong * hammer + clatter, 0.01, 0.25)
 
-    # Medium priority (amber): three rising pulses, like the hospital alarm standard.
-    amber = seq(*(seq(tone(f, 0.2, ALARM, 0.02, 0.04), silence(0.12)) for f in (523, 659, 784)))
-    save("alarm_amber", seq(amber, silence(0.3)), peak=0.6)
-
-    # High priority (flashing red): 3 + 2 fast pulses, higher and more urgent.
-    def red_pulse(f):
-        return seq(tone(f, 0.13, ALARM, 0.01, 0.025), silence(0.07))
-
-    burst = seq(red_pulse(880), red_pulse(1109), red_pulse(1319), silence(0.25), red_pulse(1109), red_pulse(1319))
-    save("alarm_red", seq(burst, silence(0.6), burst, silence(0.4)), peak=0.75)
-
-    # Cardiac arrest: the flat continuous tone. Loops seamlessly (whole number of cycles).
-    save("flatline", tone(1000, 2.0, harmonics=(1.0, 0.15), attack=0, release=0), peak=0.5)
-
-    # Crash call: overhead rising two-tone, three times.
-    crash = seq(*(seq(tone(700, 0.25, ALARM, 0.01, 0.03), tone(1050, 0.25, ALARM, 0.01, 0.05), silence(0.15)) for _ in range(3)))
-    save("crash_call", crash, peak=0.7)
+    save("school_bell", seq(school_bell(3.0), silence(0.2)), peak=0.7)
+    save("school_bell_short", seq(school_bell(1.4), silence(0.2)), peak=0.7)
 
     # --- Building sounds ----------------------------------------------------
     save("pa_chime", mix(bell(659, 1.6, 0.6), at(bell(523, 1.8, 0.7), 0.45)), peak=0.6)
 
-    # UK telephone double ring (400 + 450 Hz), one cycle with the pause, so it loops.
+    # The school office phone: UK double ring (400 + 450 Hz), one cycle with the pause, so it loops.
     def ring(seconds):
         return fade(mix(tone(400, seconds, attack=0.01, release=0.01), tone(450, seconds, attack=0.01, release=0.01)), 0.01, 0.01)
 
@@ -179,34 +172,11 @@ def main():
     save("notify", bell(1175, 0.9, 0.3), peak=0.45)
     save("notify_urgent", mix(bell(1319, 0.7, 0.2), at(bell(1319, 0.7, 0.2), 0.16), at(bell(1760, 0.9, 0.3), 0.32)), peak=0.6)
     save("new_day", mix(bell(784, 1.5, 0.5), at(bell(988, 1.5, 0.5), 0.2), at(bell(1175, 1.8, 0.6), 0.4)), peak=0.45)
-    save("discharged", mix(bell(880, 1.0, 0.35), at(bell(1319, 1.2, 0.4), 0.12)), peak=0.45)
-    save("transferred", mix(whoosh * 0.4, at(bell(784, 1.0, 0.35) * 0.7, 0.1)), peak=0.45)
     save("game_saved", mix(click * 0.6, at(bell(1397, 0.7, 0.25), 0.03)), peak=0.4)
 
     # ---- pack 2
-    # Pagers: a short triple chirp and the classic long two-tone bleep.
-    chirp = fade(tone(2900, 0.06, (1.0, 0.2)), 0.002, 0.01)
-    save("pager_chirp", seq(chirp, silence(0.05), chirp, silence(0.05), chirp), peak=0.45)
-    save("pager_bleep", seq(*[fade(tone(f, 0.12, (1.0, 0.25)), 0.003, 0.01) for f in (2400, 3000) * 4]), peak=0.45)
-
-    # Ward call bell: a soft repeating two-note buzzer at the nurses' station.
-    ding = lambda f: fade(tone(f, 0.35, (1.0, 0.4, 0.1), attack=0.004, decay=0.18), 0.004, 0.05)
-    save("call_bell", seq(ding(988), ding(784), silence(0.4), ding(988), ding(784)), peak=0.45)
-
-    # Infusion pump: insistent triple beep, repeated.
-    pump = fade(tone(1800, 0.09, (1.0, 0.3, 0.1)), 0.002, 0.01)
-    triple = seq(pump, silence(0.07), pump, silence(0.07), pump, silence(0.45))
-    save("iv_pump_alarm", seq(triple, triple), peak=0.4)
-
-    # Clinic and triage "next patient" display chime.
-    save("next_patient", mix(bell(1047, 1.0, 0.35), at(bell(1568, 1.1, 0.4), 0.14)), peak=0.45)
-
     # Department unlocked: rising four-note fanfare of bells.
     save("department_unlocked", mix(*[at(bell(f, 1.6, 0.6) * 0.8, i * 0.13) for i, f in enumerate((523, 659, 784, 1047))]), peak=0.6)
-
-    # Patient deteriorating: two falling notes with an edge, quieter than the alarms.
-    edge_ = lambda f: fade(tone(f, 0.22, (1.0, 0.5, 0.3, 0.15), attack=0.004, decay=0.15), 0.004, 0.04)
-    save("deteriorating", seq(edge_(880), silence(0.04), edge_(659)), peak=0.5)
 
     # Interface: tab switch and slider tick.
     save("ui_tab", fade(tone(1600, 0.04, (1.0, 0.2), attack=0.001, decay=0.012), 0.001, 0.01), peak=0.35)

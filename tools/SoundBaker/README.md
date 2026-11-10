@@ -2,7 +2,7 @@
 
 How the game's sounds are made.
 
-- `make_tones.py` makes the monitor beeps, alarms, chimes and interface sounds with code (no credits).
+- `make_tones.py` makes the school bell, chimes and interface sounds with code (no credits).
   Output: `game/Audio/Tones/*.wav`.
 - `sounds.json` lists every ElevenLabs sound: prompt, length, whether it loops, and how many takes to make.
 - `generate_sfx.py` makes the takes into `takes/` (not committed). Existing takes are skipped, so
@@ -11,7 +11,7 @@ How the game's sounds are made.
   It evens out loudness, trims silence from one-shots and crossfades loop ends so they wrap without a click.
   `python3 tools/SoundBaker/choose_take.py siren=2` swaps one sound to another take.
 
-In the game, `game/Scripts/Audio/HospitalAudio.cs` plays everything, and a missing file is just silent.
+In the game, `game/Scripts/Audio/SchoolAudio.cs` plays everything, and a missing file is just silent.
 Run with `-- --log-sounds` to print each sound as it plays.
 
 ## Tannoy announcements
@@ -22,3 +22,4 @@ Run with `-- --log-sounds` to print each sound as it plays.
 - The simulation publishes an `Announcement` event with the clip names to play; `Announcer.cs` plays the
   chime and the lines in turn on the Announcements bus, which adds the ceiling-speaker sound.
 - Pack 2 sounds in `sounds.json` are marked `"pack": 2`.
+- Pack 3 sounds (school ambience: classroom, corridor changeover, playground, sports hall, canteen) are listed but not made yet; they need the ElevenLabs key.

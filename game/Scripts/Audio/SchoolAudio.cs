@@ -9,6 +9,8 @@ using BlueprintSchool.Simulation.Core;
 using BlueprintSchool.Simulation.Rooms;
 using BlueprintSchool.Simulation.Simulation;
 using BlueprintSchool.UI;
+using BlueprintSchool.Simulation.Data.Models;
+using BlueprintSchool.Simulation.SchoolDay;
 using Godot;
 
 namespace BlueprintSchool.Audio;
@@ -59,6 +61,10 @@ public partial class SchoolAudio : Node2D
         _subscriptions.Add(session.Events.Subscribe<Announcement>(announcer.Enqueue));
         _subscriptions.Add(session.Events.Subscribe<Notification>(OnNotification));
         _subscriptions.Add(session.Events.Subscribe<NewDayStarted>(_ => PlayUi("new_day", 0.6)));
+
+        // The school bell: a full ring for lessons and the end of the day, a short one for tutor time, break and lunch.
+        _subscriptions.Add(session.Events.Subscribe<BellRang>(b => PlayFlat(
+            b.Period.Kind is BellPeriodKind.Lesson or BellPeriodKind.AfterSchool ? "school_bell" : "school_bell_short", 0.8, AudioSettings.EffectsBus)));
 
         // Every button in the game clicks, and every panel whooshes open.
         GetTree().NodeAdded += OnNodeAdded;
